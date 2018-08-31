@@ -1,10 +1,10 @@
-#include "catch.hpp"
 // Copyright (c) 2015 The LBRY Foundation
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://opensource.org/licenses/mit-license.php
 
 #include <iostream>
 #include <string>
+#include <catch2/catch.hpp>
 
 #include "main.h"
 #include "consensus/validation.h"
