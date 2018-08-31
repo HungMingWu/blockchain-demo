@@ -1,0 +1,8 @@
+﻿cmake_minimum_required (VERSION 3.8)
+project (Blockchain C CXX)
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
+add_subdirectory(third_party/spdlog)
+add_subdirectory(third_party/Catch2)
+add_subdirectory(Blockchain)
+add_subdirectory(Blockchain-Exp)
+add_subdirectory(Blockchain-Test)
