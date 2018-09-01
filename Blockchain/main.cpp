@@ -62,7 +62,7 @@
 using namespace std;
 
 #if defined(NDEBUG)
-# error "Ulord Core cannot be compiled without assertions."
+//# error "Ulord Core cannot be compiled without assertions."
 #endif
 
 /**

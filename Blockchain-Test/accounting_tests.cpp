@@ -3,7 +3,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <stdint.h>
-#include <catch2\catch.hpp>
+#include <catch2/catch.hpp>
 #include "wallet/wallet.h"
 #include "wallet/walletdb.h"
 

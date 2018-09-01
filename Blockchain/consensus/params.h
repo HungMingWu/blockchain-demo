@@ -6,10 +6,10 @@
 #ifndef BITCOIN_CONSENSUS_PARAMS_H
 #define BITCOIN_CONSENSUS_PARAMS_H
 
-#include "uint256.h"
+#include "../uint256.h"
 #include <map>
 #include <string>
-#include "amount.h"
+#include "../amount.h"
 
 namespace Consensus {
 

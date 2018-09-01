@@ -133,6 +133,7 @@ void Transform(uint32_t* s, const unsigned char* chunk)
 
 ////// SHA-256
 
+const size_t CSHA256::OUTPUT_SIZE;
 CSHA256::CSHA256() : bytes(0)
 {
     sha256::Initialize(s);

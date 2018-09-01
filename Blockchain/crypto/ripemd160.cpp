@@ -239,6 +239,7 @@ void Transform(uint32_t* s, const unsigned char* chunk)
 
 ////// RIPEMD160
 
+const size_t CRIPEMD160::OUTPUT_SIZE;
 CRIPEMD160::CRIPEMD160() : bytes(0)
 {
     ripemd160::Initialize(s);

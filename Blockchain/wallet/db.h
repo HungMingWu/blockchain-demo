@@ -18,13 +18,18 @@
 
 #include <boost/filesystem/path.hpp>
 
-#include <db_cxx.h>
+//#include <db_cxx.h>
 
 static const unsigned int DEFAULT_WALLET_DBLOGSIZE = 100;
 static const bool DEFAULT_WALLET_PRIVDB = true;
 
 extern unsigned int nWalletDBUpdated;
 
+class Db;
+class Dbc;
+class DbTxn;
+static int DB_TXN_WRITE_NOSYNC = 0;
+static int DB_NEXT = 1;
 class CDBEnv
 {
 private:

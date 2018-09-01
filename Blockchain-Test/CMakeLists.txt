@@ -33,9 +33,10 @@ set(TEST_SRCS
 	DoS_tests.cpp
 	test_ulord.cpp
 )
-add_executable(test test.cpp ${TEST_SRCS})
-target_include_directories(test PRIVATE ../Blockchain)
-target_link_libraries(test
-PRIVATE Boost::filesystem
+add_executable(unit_test test.cpp ${TEST_SRCS})
+target_compile_features(unit_test PRIVATE cxx_std_14)
+target_include_directories(unit_test PRIVATE ../Blockchain)
+target_link_libraries(unit_test
+PRIVATE ${Boost_LIBRARIES}
 PRIVATE Catch2
 PUBLIC Blockchain)

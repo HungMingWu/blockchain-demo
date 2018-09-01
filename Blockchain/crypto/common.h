@@ -9,6 +9,9 @@
 #include "ulord-config.h"
 #endif
 
+#if defined (linux)
+#include <endian.h>
+#endif
 #include <stdint.h>
 
 #include "../compat/endian.h"
