@@ -810,13 +810,13 @@ void ShrinkDebugFile()
 		// Restart the file with some of the end
 		std::vector <char> vch(200000, 0);
 		fseek(file, -((long)vch.size()), SEEK_END);
-		int nBytes = fread(begin_ptr(vch), 1, vch.size(), file);
+		int nBytes = fread(vch.data(), 1, vch.size(), file);
 		fclose(file);
 
 		file = fopen(pathLog.string().c_str(), "w");
 		if (file)
 		{
-			fwrite(begin_ptr(vch), 1, nBytes, file);
+			fwrite(vch.data(), 1, nBytes, file);
 			fclose(file);
 		}
 	}
@@ -1139,51 +1139,3 @@ int write_profile_string_nosection(const char *key, const char *value, const cha
 	fclose(out);
 	return 1;
 }
-
-int read_profile_string_nosection(const char *key, char *value,
-	int size, const char *default_value, const char *file)
-{
-	char buf[MAX_FILE_SIZE] = { 0 };
-	int file_size;
-	int  key_s, key_e, value_s, value_e;
-
-	//check parameters
-
-	assert(key != NULL && strlen(key));
-	assert(value != NULL);
-	assert(size > 0);
-	assert(file != NULL && strlen(key));
-
-	if (!load_ini_file(file, buf, &file_size))
-	{
-		if (default_value != NULL)
-		{
-			strncpy(value, default_value, size);
-		}
-		return 0;
-	}
-	if (!parse_file_nosection(key, buf, &key_s, &key_e, &value_s, &value_e))
-	{
-		if (default_value != NULL)
-		{
-			strncpy(value, default_value, size);
-		}
-		return 0; //not find the key
-	}
-	else
-	{
-		int cpcount = value_e - value_s;
-
-		if (size - 1 < cpcount)
-		{
-			cpcount = size - 1;
-		}
-
-		memset(value, 0, size);
-		memcpy(value, buf + value_s, cpcount);
-		value[cpcount] = '\0';
-
-		return 1;
-	}
-}
-

@@ -11,6 +11,7 @@
 #include "main.h"
 #include "chainparams.h"
 #include "utilstrencodings.h"
+#include "Log.h"
 #include <boost/algorithm/string.hpp>
 
 // DECLARE GLOBAL VARIABLES FOR GOVERNANCE CLASSES
@@ -124,11 +125,11 @@ bool CGovernanceTriggerManager::AddNewTrigger(uint256 nHash)
         DBG( cout << "CGovernanceTriggerManager::AddNewTrigger Error creating superblock"
              << ", e.what() = " << e.what()
              << endl; );
-        LogPrintf("CGovernanceTriggerManager::AddNewTrigger -- Error creating superblock: %s\n", e.what());
+        LOG_INFO("CGovernanceTriggerManager::AddNewTrigger -- Error creating superblock: %s\n", e.what());
         return false;
     }
     catch(...) {
-        LogPrintf("CGovernanceTriggerManager::AddNewTrigger: Unknown Error creating superblock\n");
+        LOG_INFO("CGovernanceTriggerManager::AddNewTrigger: Unknown Error creating superblock\n");
         DBG( cout << "CGovernanceTriggerManager::AddNewTrigger Error creating superblock catchall" << endl; );
         return false;
     }
@@ -283,7 +284,7 @@ bool CSuperblockManager::IsSuperblockTriggered(int nBlockHeight)
         return false;
     }
     else {
-        LogPrintf("SuperBlockHeight right %d\n",nBlockHeight);
+        LOG_INFO("SuperBlockHeight right %d\n",nBlockHeight);
     }
     return true;
 }
@@ -302,7 +303,7 @@ bool CSuperblockManager::IsSuperblockVoteTriggered(int nBlockHeight)
         for (CSuperblock_sptr pSuperblock : vecTriggers)
         {
             if(!pSuperblock) {
-                LogPrintf("CSuperblockManager::IsSuperblockTriggered -- Non-superblock found, continuing\n");
+                LOG_INFO("CSuperblockManager::IsSuperblockTriggered -- Non-superblock found, continuing\n");
                 DBG( cout << "IsSuperblockTriggered Not a superblock, continuing " << endl; );
                 continue;
             }
@@ -310,7 +311,7 @@ bool CSuperblockManager::IsSuperblockVoteTriggered(int nBlockHeight)
             CGovernanceObject* pObj = pSuperblock->GetGovernanceObject();
 
             if(!pObj) {
-                LogPrintf("CSuperblockManager::IsSuperblockTriggered -- pObj == NULL, continuing\n");
+                LOG_INFO("CSuperblockManager::IsSuperblockTriggered -- pObj == NULL, continuing\n");
                 DBG( cout << "IsSuperblockTriggered pObj is NULL, continuing" << endl; );
                 continue;
             }
@@ -415,9 +416,9 @@ void CSuperblockManager::AppendFoundersReward(CMutableTransaction& txNewRet, int
 
     // TODO: PRINT NICE N.N UT OUTPUT
 
-    DBG( cout << "CSuperblockManager::AppendFoundersReward Before LogPrintf call, nAmount = " << foundersReward << endl; );
-    LogPrintf("NEW Superblock : output to founders (addr %s, amount %d)\n", address2.ToString(), foundersReward);
-    DBG( cout << "CSuperblockManager::AppendFoundersReward After LogPrintf call " << endl; );
+    DBG( cout << "CSuperblockManager::AppendFoundersReward Before LOG_INFO call, nAmount = " << foundersReward << endl; );
+    LOG_INFO("NEW Superblock : output to founders (addr %s, amount %d)\n", address2.ToString(), foundersReward);
+    DBG( cout << "CSuperblockManager::AppendFoundersReward After LOG_INFO call " << endl; );
 }
 
 /**
@@ -448,7 +449,7 @@ void CSuperblockManager::CreateSuperblock(CMutableTransaction& txNewRet, int nBl
 	
     if(!IsSuperblockVoteTriggered(nBlockHeight))
     {
-        LogPrintf("CSuperblockManager::IsSuperblockVoteTriggered -- Can't get vote at height %d\n", nBlockHeight);
+        LOG_INFO("CSuperblockManager::IsSuperblockVoteTriggered -- Can't get vote at height %d\n", nBlockHeight);
         return;
     }
 
@@ -485,9 +486,9 @@ void CSuperblockManager::CreateSuperblock(CMutableTransaction& txNewRet, int nBl
 
             // TODO: PRINT NICE N.N UT OUTPUT
 
-            DBG( cout << "CSuperblockManager::CreateSuperblock Before LogPrintf call, nAmount = " << payment.nAmount << endl; );
-            LogPrintf("NEW Superblock : output %d (addr %s, amount %d)\n", i, address2.ToString(), payment.nAmount);
-            DBG( cout << "CSuperblockManager::CreateSuperblock After LogPrintf call " << endl; );
+            DBG( cout << "CSuperblockManager::CreateSuperblock Before LOG_INFO call, nAmount = " << payment.nAmount << endl; );
+            LOG_INFO("NEW Superblock : output %d (addr %s, amount %d)\n", i, address2.ToString(), payment.nAmount);
+            DBG( cout << "CSuperblockManager::CreateSuperblock After LOG_INFO call " << endl; );
         } else {
             DBG( cout << "CSuperblockManager::CreateSuperblock Payment not found " << endl; );
         }
@@ -602,14 +603,14 @@ void CSuperblock::ParsePaymentSchedule(std::string& strPaymentAddresses, std::st
     if (vecParsed1.size() != vecParsed2.size()) {
         std::ostringstream ostr;
         ostr << "CSuperblock::ParsePaymentSchedule -- Mismatched payments and amounts";
-        LogPrintf("%s\n", ostr.str());
+        LOG_INFO("%s\n", ostr.str());
         throw std::runtime_error(ostr.str());
     }
 
     if (vecParsed1.size() == 0) {
         std::ostringstream ostr;
         ostr << "CSuperblock::ParsePaymentSchedule -- Error no payments";
-        LogPrintf("%s\n", ostr.str());
+        LOG_INFO("%s\n", ostr.str());
         throw std::runtime_error(ostr.str());
     }
 
@@ -626,7 +627,7 @@ void CSuperblock::ParsePaymentSchedule(std::string& strPaymentAddresses, std::st
         if (!address.IsValid()) {
             std::ostringstream ostr;
             ostr << "CSuperblock::ParsePaymentSchedule -- Invalid Ulord Address : " <<  vecParsed1[i];
-            LogPrintf("%s\n", ostr.str());
+            LOG_INFO("%s\n", ostr.str());
             throw std::runtime_error(ostr.str());
         }
 
@@ -650,7 +651,7 @@ void CSuperblock::ParsePaymentSchedule(std::string& strPaymentAddresses, std::st
             std::ostringstream ostr;
             ostr << "CSuperblock::ParsePaymentSchedule -- Invalid payment found: address = " << address.ToString()
                  << ", amount = " << nAmount;
-            LogPrintf("%s\n", ostr.str());
+            LOG_INFO("%s\n", ostr.str());
             throw std::runtime_error(ostr.str());
         }
     }
@@ -701,7 +702,7 @@ bool CSuperblock::IsFounderValid(const CTransaction& txNew, int nBlockHeight, CA
             ExtractDestination(out.scriptPubKey, address1);
             CBitcoinAddress address2(address1);
             //CBitcoinAddress address2(CScriptID(out.scriptPubKey));                                                                                                                                              
-            LogPrintf(" out.scriptPubKey [%s]  [%s] \n",address2.ToString(), address.ToString());
+            LOG_INFO(" out.scriptPubKey [%s]  [%s] \n",address2.ToString(), address.ToString());
             //if (out.scriptPubKey == Params().GetFoundersRewardScriptAtHeight(nBlockHeight))
             if (address2 == address)
             {
@@ -712,10 +713,10 @@ bool CSuperblock::IsFounderValid(const CTransaction& txNew, int nBlockHeight, CA
         {
     	    if (foundersActual == 0)
 	        {
-    	        LogPrintf("CSuperblock::IsValid -- ERROR: Block invalid, founders reward missing: block %lld, expected value  %lld\n", nBlockValue, foundersExpected);
+    	        LOG_INFO("CSuperblock::IsValid -- ERROR: Block invalid, founders reward missing: block %lld, expected value  %lld\n", nBlockValue, foundersExpected);
 	            return false;
 	        }
-            LogPrintf("CSuperblock::IsValid -- ERROR: Block invalid, wrong founders reward: block %lld, actual value %lld, expected value  %lld\n", nBlockValue, foundersActual, foundersExpected);
+            LOG_INFO("CSuperblock::IsValid -- ERROR: Block invalid, wrong founders reward: block %lld, actual value %lld, expected value  %lld\n", nBlockValue, foundersActual, foundersExpected);
             return false;
         }
     }
@@ -723,7 +724,7 @@ bool CSuperblock::IsFounderValid(const CTransaction& txNew, int nBlockHeight, CA
 	// miner should not get more than he would usually get
     if(nBlockValue > blockReward + budgetLimit + foundersExpected)
     {
-        LogPrintf("CSuperblock::IsValid -- ERROR: Block invalid, block value limit exceeded: block %lld, limit %lld\n", nBlockValue, blockReward + budgetLimit + foundersExpected);
+        LOG_INFO("CSuperblock::IsValid -- ERROR: Block invalid, block value limit exceeded: block %lld, limit %lld\n", nBlockValue, blockReward + budgetLimit + foundersExpected);
         return false;
     }
     return true;
@@ -743,7 +744,7 @@ bool CSuperblock::IsValid(const CTransaction& txNew, int nBlockHeight, CAmount b
     // shared pointers there's no way our object can get deleted while this
     // code is running.
     if(!IsValidBlockHeight(nBlockHeight)) {
-        LogPrintf("CSuperblock::IsValid -- ERROR: Block invalid, incorrect block height\n");
+        LOG_INFO("CSuperblock::IsValid -- ERROR: Block invalid, incorrect block height\n");
         return false;
     }
 
@@ -765,7 +766,7 @@ bool CSuperblock::IsValid(const CTransaction& txNew, int nBlockHeight, CAmount b
         // This means the block cannot have all the superblock payments
         // so it is not valid.
         // TODO: could that be that we just hit coinbase size limit?
-        LogPrintf("CSuperblock::IsValid -- ERROR: Block invalid, too few superblock payments\n");
+        LOG_INFO("CSuperblock::IsValid -- ERROR: Block invalid, too few superblock payments\n");
         return false;
     }
 
@@ -774,7 +775,7 @@ bool CSuperblock::IsValid(const CTransaction& txNew, int nBlockHeight, CAmount b
     CAmount budgetsActual = GetPaymentsTotalAmount();
     CAmount budgetLimit = GetBudget(nBlockHeight, cp);
     if(budgetsActual > budgetLimit) {
-        LogPrintf("CSuperblock::IsValid -- ERROR: Block invalid, payments limit exceeded: payments %lld, limit %lld\n", budgetsActual, budgetLimit);
+        LOG_INFO("CSuperblock::IsValid -- ERROR: Block invalid, payments limit exceeded: payments %lld, limit %lld\n", budgetsActual, budgetLimit);
         return false;
     }
 
@@ -786,7 +787,7 @@ bool CSuperblock::IsValid(const CTransaction& txNew, int nBlockHeight, CAmount b
     // miner should not get more than he would usually get
     if(nBlockValue > blockReward + budgetLimit + foundersExpected)
     {
-        LogPrintf("CSuperblock::IsValid -- ERROR: Block invalid, block value limit exceeded: block %lld, limit %lld\n", nBlockValue, blockReward + budgetLimit + foundersExpected);
+        LOG_INFO("CSuperblock::IsValid -- ERROR: Block invalid, block value limit exceeded: block %lld, limit %lld\n", nBlockValue, blockReward + budgetLimit + foundersExpected);
         return false;
     }
 
@@ -795,7 +796,7 @@ bool CSuperblock::IsValid(const CTransaction& txNew, int nBlockHeight, CAmount b
         CGovernancePayment payment;
         if(!GetPayment(i, payment)) {
             // This shouldn't happen so log a warning
-            LogPrintf("CSuperblock::IsValid -- WARNING: Failed to find payment: %d of %d total payments\n", i, nPayments);
+            LOG_INFO("CSuperblock::IsValid -- WARNING: Failed to find payment: %d of %d total payments\n", i, nPayments);
             continue;
         }
 
@@ -818,7 +819,7 @@ bool CSuperblock::IsValid(const CTransaction& txNew, int nBlockHeight, CAmount b
             CTxDestination address1;
             ExtractDestination(payment.script, address1);
             CBitcoinAddress address2(address1);
-            LogPrintf("CSuperblock::IsValid -- ERROR: Block invalid: %d payment %d to %s not found\n", i, payment.nAmount, address2.ToString());
+            LOG_INFO("CSuperblock::IsValid -- ERROR: Block invalid: %d payment %d to %s not found\n", i, payment.nAmount, address2.ToString());
 
             return false;
         }

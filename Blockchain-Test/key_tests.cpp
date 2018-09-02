@@ -101,10 +101,10 @@ TEST_CASE("key_test1")
 	REQUIRE(!key2C.VerifyPubKey(pubkey2));
 	REQUIRE(key2C.VerifyPubKey(pubkey2C));
 
-	REQUIRE(addr1.Get() == CTxDestination(pubkey1.GetID()));
-	REQUIRE(addr2.Get() == CTxDestination(pubkey2.GetID()));
-	REQUIRE(addr1C.Get() == CTxDestination(pubkey1C.GetID()));
-	REQUIRE(addr2C.Get() == CTxDestination(pubkey2C.GetID()));
+	REQUIRE(bool(addr1.Get() == CTxDestination(pubkey1.GetID())));
+	REQUIRE(bool(addr2.Get() == CTxDestination(pubkey2.GetID())));
+	REQUIRE(bool(addr1C.Get() == CTxDestination(pubkey1C.GetID())));
+	REQUIRE(bool(addr2C.Get() == CTxDestination(pubkey2C.GetID())));
 
 	for (int n = 0; n < 16; n++)
 	{

@@ -22,13 +22,38 @@ set(TEST_SRCS
 	compress_tests.cpp
 	getarg_tests.cpp
 	hash_tests.cpp
-	# key_tests.cpp compile error
+	key_tests.cpp
 	limitedmap_tests.cpp
 	main_tests.cpp
 	mempool_tests.cpp
 	miner_tests.cpp
-	# multisig_tests.cpp  compile error
+	multisig_tests.cpp
 	netbase_tests.cpp
+	pmt_tests.cpp
+	policyestimator_tests.cpp
+	pow_tests.cpp
+	prevector_tests.cpp
+	ratecheck_tests.cpp
+	reverselock_tests.cpp
+	# rpc_tests.cpp
+	# rpc_wallet_tests.cpp
+	sanity_tests.cpp
+	scheduler_tests.cpp
+	script_P2PKH_tests.cpp
+	script_P2SH_tests.cpp
+	# script_tests.cpp
+	scriptnum_tests.cpp
+	serialize_tests.cpp
+	# sighash_tests.cpp
+	sigopcount_tests.cpp
+	skiplist_tests.cpp
+	streams_tests.cpp
+	timedata_tests.cpp
+	#transaction_tests.cpp
+	txvalidationcache_tests.cpp
+	uint256_tests.cpp
+	util_tests.cpp
+	versionbits_tests.cpp
 	Checkpoints_tests.cpp
 	DoS_tests.cpp
 	test_ulord.cpp

@@ -6,6 +6,7 @@
 #include "governance-vote.h"
 #include "masternodeman.h"
 #include "util.h"
+#include "Log.h"
 
 #include <boost/lexical_cast.hpp>
 
@@ -195,7 +196,7 @@ vote_signal_enum_t CGovernanceVoting::ConvertVoteSignal(std::string strVoteSigna
     {
         std::ostringstream ostr;
         ostr << "CGovernanceVote::ConvertVoteSignal: error : " << e.what() << std::endl;
-        LogPrintf(ostr.str().c_str());
+        LOG_INFO(ostr.str().c_str());
     }
 
     return eSignal;
@@ -240,12 +241,12 @@ bool CGovernanceVote::Sign(CKey& keyMasternode, CPubKey& pubKeyMasternode)
         boost::lexical_cast<std::string>(nVoteSignal) + "|" + boost::lexical_cast<std::string>(nVoteOutcome) + "|" + boost::lexical_cast<std::string>(nTime);
 
     if(!privSendSigner.SignMessage(strMessage, vchSig, keyMasternode)) {
-        LogPrintf("CGovernanceVote::Sign -- SignMessage() failed\n");
+        LOG_INFO("CGovernanceVote::Sign -- SignMessage() failed\n");
         return false;
     }
 
     if(!privSendSigner.VerifyMessage(pubKeyMasternode, vchSig, strMessage, strError)) {
-        LogPrintf("CGovernanceVote::Sign -- VerifyMessage() failed, error: %s\n", strError);
+        LOG_INFO("CGovernanceVote::Sign -- VerifyMessage() failed, error: %s\n", strError);
         return false;
     }
 
@@ -286,7 +287,7 @@ bool CGovernanceVote::IsValid(bool fSignatureCheck) const
         boost::lexical_cast<std::string>(nVoteSignal) + "|" + boost::lexical_cast<std::string>(nVoteOutcome) + "|" + boost::lexical_cast<std::string>(nTime);
 
     if(!privSendSigner.VerifyMessage(infoMn->pubKeyMasternode, vchSig, strMessage, strError)) {
-        LogPrintf("CGovernanceVote::IsValid -- VerifyMessage() failed, error: %s\n", strError);
+        LOG_INFO("CGovernanceVote::IsValid -- VerifyMessage() failed, error: %s\n", strError);
         return false;
     }
 

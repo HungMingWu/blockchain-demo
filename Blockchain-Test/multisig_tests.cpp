@@ -233,7 +233,7 @@ TEST_CASE("multisig_Solver1")
 		REQUIRE(solutions.size() == 1);
 		CTxDestination addr;
 		REQUIRE(ExtractDestination(s, addr));
-		REQUIRE(addr == keyaddr[0]);
+		REQUIRE(bool(addr == keyaddr[0]));
 #ifdef ENABLE_WALLET
 		REQUIRE(IsMine(keystore, s));
 		REQUIRE(!IsMine(emptykeystore, s));
@@ -248,7 +248,7 @@ TEST_CASE("multisig_Solver1")
 		REQUIRE(solutions.size() == 1);
 		CTxDestination addr;
 		REQUIRE(ExtractDestination(s, addr));
-		REQUIRE(addr == keyaddr[0]);
+		REQUIRE(bool(addr == keyaddr[0]));
 #ifdef ENABLE_WALLET
 		REQUIRE(IsMine(keystore, s));
 		REQUIRE(!IsMine(emptykeystore, s));
@@ -279,8 +279,8 @@ TEST_CASE("multisig_Solver1")
 		vector<CTxDestination> addrs;
 		int nRequired;
 		REQUIRE(ExtractDestinations(s, whichType, addrs, nRequired));
-		REQUIRE(addrs[0] == keyaddr[0]);
-		REQUIRE(addrs[1] == keyaddr[1]);
+		REQUIRE(bool(addrs[0] == keyaddr[0]));
+		REQUIRE(bool(addrs[1] == keyaddr[1]));
 		REQUIRE(nRequired == 1);
 #ifdef ENABLE_WALLET
 		REQUIRE(IsMine(keystore, s));

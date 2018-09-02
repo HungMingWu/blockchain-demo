@@ -17,6 +17,7 @@
 #include "version.h"
 
 #include <boost/algorithm/string.hpp>
+#include <boost/utility/string_view.hpp>
 #include <boost/dynamic_bitset.hpp>
 
 using namespace std;
@@ -32,7 +33,7 @@ enum RetFormat {
 
 static const struct {
     enum RetFormat rf;
-    const char* name;
+    boost::string_view name;
 } rf_names[] = {
       {RF_UNDEF, ""},
       {RF_BINARY, "bin"},
@@ -97,11 +98,8 @@ static string AvailableDataFormatsString()
 {
     string formats = "";
     for (unsigned int i = 0; i < ARRAYLEN(rf_names); i++)
-        if (strlen(rf_names[i].name) > 0) {
-            formats.append(".");
-            formats.append(rf_names[i].name);
-            formats.append(", ");
-        }
+        if (!rf_names[i].name.empty())
+			formats += string(".") + string(rf_names[i].name) + string(", ");
 
     if (formats.length() > 0)
         return formats.substr(0, formats.length() - 2);

@@ -11,6 +11,7 @@
 #include "rpcprotocol.h" // For HTTP status codes
 #include "sync.h"
 #include "ui_interface.h"
+#include "Log.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -326,7 +327,7 @@ static bool HTTPBindAddresses(struct evhttp* http)
         endpoints.push_back(std::make_pair("::1", defaultPort));
         endpoints.push_back(std::make_pair("127.0.0.1", defaultPort));
         if (mapArgs.count("-rpcbind")) {
-            LogPrintf("WARNING: option -rpcbind was ignored because -rpcallowip was not specified, refusing to allow everyone to connect\n");
+            LOG_INFO("WARNING: option -rpcbind was ignored because -rpcallowip was not specified, refusing to allow everyone to connect\n");
         }
     } else if (mapArgs.count("-rpcbind")) { // Specific bind address
         const std::vector<std::string>& vbind = mapMultiArgs["-rpcbind"];
@@ -348,7 +349,7 @@ static bool HTTPBindAddresses(struct evhttp* http)
         if (bind_handle) {
             boundSockets.push_back(bind_handle);
         } else {
-            LogPrintf("Binding RPC on address %s port %i failed.\n", i->first, i->second);
+            LOG_INFO("Binding RPC on address %s port %i failed.\n", i->first, i->second);
         }
     }
     return !boundSockets.empty();
@@ -369,7 +370,7 @@ static void libevent_log_cb(int severity, const char *msg)
 # define EVENT_LOG_WARN _EVENT_LOG_WARN
 #endif
     if (severity >= EVENT_LOG_WARN) // Log warn messages and higher without debug category
-        LogPrintf("libevent: %s\n", msg);
+        LOG_INFO("libevent: %s\n", msg);
     else
         LogPrint("libevent", "libevent: %s\n", msg);
 }
@@ -407,14 +408,14 @@ bool InitHTTPServer()
 
     base = event_base_new(); // XXX RAII
     if (!base) {
-        LogPrintf("Couldn't create an event_base: exiting\n");
+        LOG_INFO("Couldn't create an event_base: exiting\n");
         return false;
     }
 
     /* Create a new evhttp object to handle requests. */
     http = evhttp_new(base); // XXX RAII
     if (!http) {
-        LogPrintf("couldn't create evhttp. Exiting.\n");
+        LOG_INFO("couldn't create evhttp. Exiting.\n");
         event_base_free(base);
         return false;
     }
@@ -425,7 +426,7 @@ bool InitHTTPServer()
     evhttp_set_gencb(http, http_request_cb, NULL);
 
     if (!HTTPBindAddresses(http)) {
-        LogPrintf("Unable to bind any endpoint for RPC server\n");
+        LOG_INFO("Unable to bind any endpoint for RPC server\n");
         evhttp_free(http);
         event_base_free(base);
         return false;
@@ -433,7 +434,7 @@ bool InitHTTPServer()
 
     LogPrint("http", "Initialized HTTP server\n");
     int workQueueDepth = std::max((long)GetArg("-rpcworkqueue", DEFAULT_HTTP_WORKQUEUE), 1L);
-    LogPrintf("HTTP: creating work queue of depth %d\n", workQueueDepth);
+    LOG_INFO("HTTP: creating work queue of depth %d\n", workQueueDepth);
 
     workQueue = new WorkQueue<HTTPClosure>(workQueueDepth);
     eventBase = base;
@@ -447,7 +448,7 @@ bool StartHTTPServer()
 {
     LogPrint("http", "Starting HTTP server\n");
     int rpcThreads = std::max((long)GetArg("-rpcthreads", DEFAULT_HTTP_THREADS), 1L);
-    LogPrintf("HTTP: starting %d worker threads\n", rpcThreads);
+    LOG_INFO("HTTP: starting %d worker threads\n", rpcThreads);
     threadHTTP = boost::thread(std::bind(&ThreadHTTP, eventBase, eventHTTP));
 
     for (int i = 0; i < rpcThreads; i++)
@@ -492,7 +493,7 @@ void StopHTTPServer()
         // could be used again (if desirable).
         // (see discussion in https://github.com/bitcoin/bitcoin/pull/6990)
         if (!threadHTTP.try_join_for(boost::chrono::milliseconds(2000))) {
-            LogPrintf("HTTP event loop did not exit within allotted time, sending loopbreak\n");
+            LOG_INFO("HTTP event loop did not exit within allotted time, sending loopbreak\n");
             event_base_loopbreak(eventBase);
             threadHTTP.join();
         }
@@ -547,7 +548,7 @@ HTTPRequest::~HTTPRequest()
 {
     if (!replySent) {
         // Keep track of whether reply was sent to avoid request leaks
-        LogPrintf("%s: Unhandled request\n", __func__);
+        LOG_INFO("%s: Unhandled request\n", __func__);
         WriteReply(HTTP_INTERNAL, "Unhandled request");
     }
     // evhttpd cleans up the request, as long as a reply was sent.

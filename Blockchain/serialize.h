@@ -45,35 +45,6 @@ inline T* NCONST_PTR(const T* val)
 	return const_cast<T*>(val);
 }
 
-/**
- * Get begin pointer of vector (non-const version).
- * @note These functions avoid the undefined case of indexing into an empty
- * vector, as well as that of indexing after the end of the vector.
- */
-template <typename V>
-inline typename V::value_type* begin_ptr(V& v)
-{
-	return v.empty() ? NULL : &v[0];
-}
-/** Get begin pointer of vector (const version) */
-template <typename V>
-inline const typename V::value_type* begin_ptr(const V& v)
-{
-	return v.empty() ? NULL : &v[0];
-}
-/** Get end pointer of vector (non-const version) */
-template <typename V>
-inline typename V::value_type* end_ptr(V& v)
-{
-	return v.empty() ? NULL : (&v[0] + v.size());
-}
-/** Get end pointer of vector (const version) */
-template <typename V>
-inline const typename V::value_type* end_ptr(const V& v)
-{
-	return v.empty() ? NULL : (&v[0] + v.size());
-}
-
 /*
  * Lowest-level serialization and conversion.
  * @note Sizes of these types are verified in the tests
@@ -400,14 +371,14 @@ public:
 	template <class T, class TAl>
 	explicit CFlatData(std::vector<T, TAl> &v)
 	{
-		pbegin = (char*)begin_ptr(v);
-		pend = (char*)end_ptr(v);
+		pbegin = (char*)v.data();
+		pend = (char*)(v.data() + v.size());
 	}
 	template <unsigned int N, typename T, typename S, typename D>
 	explicit CFlatData(prevector<N, T, S, D> &v)
 	{
-		pbegin = (char*)begin_ptr(v);
-		pend = (char*)end_ptr(v);
+		pbegin = (char*)&v[0];
+		pend = (char*)(&v[0] + v.size());
 	}
 	char* begin() { return pbegin; }
 	const char* begin() const { return pbegin; }

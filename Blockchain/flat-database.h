@@ -10,6 +10,7 @@
 #include "hash.h"
 #include "streams.h"
 #include "util.h"
+#include "Log.h"
 
 #include <boost/filesystem.hpp>
 
@@ -66,8 +67,8 @@ private:
         }
         fileout.fclose();
 
-        LogPrintf("Written info to %s  %dms\n", strFilename, GetTimeMillis() - nStart);
-        LogPrintf("     %s\n", objToSave.ToString());
+        LOG_INFO("Written info to %s  %dms\n", strFilename, GetTimeMillis() - nStart);
+        LOG_INFO("     %s\n", objToSave.ToString());
 
         return true;
     }
@@ -151,12 +152,12 @@ private:
             return IncorrectFormat;
         }
 
-        LogPrintf("Loaded info from %s  %dms\n", strFilename, GetTimeMillis() - nStart);
-        LogPrintf("     %s\n", objToLoad.ToString());
+        LOG_INFO("Loaded info from %s  %dms\n", strFilename, GetTimeMillis() - nStart);
+        LOG_INFO("     %s\n", objToLoad.ToString());
         if(!fDryRun) {
-            LogPrintf("%s: Cleaning....\n", __func__);
+            LOG_INFO("%s: Cleaning....\n", __func__);
             objToLoad.CheckAndRemove();
-            LogPrintf("     %s\n", objToLoad.ToString());
+            LOG_INFO("     %s\n", objToLoad.ToString());
         }
 
         return Ok;
@@ -173,19 +174,19 @@ public:
 
     bool Load(T& objToLoad)
     {
-        LogPrintf("Reading info from %s...\n", strFilename);
+        LOG_INFO("Reading info from %s...\n", strFilename);
         ReadResult readResult = Read(objToLoad);
         if (readResult == FileError)
-            LogPrintf("Missing file %s, will try to recreate\n", strFilename);
+            LOG_INFO("Missing file %s, will try to recreate\n", strFilename);
         else if (readResult != Ok)
         {
-            LogPrintf("Error reading %s: ", strFilename);
+            LOG_INFO("Error reading %s: ", strFilename);
             if(readResult == IncorrectFormat)
             {
-                LogPrintf("%s: Magic is ok but data has invalid format, will try to recreate\n", __func__);
+                LOG_INFO("%s: Magic is ok but data has invalid format, will try to recreate\n", __func__);
             }
             else {
-                LogPrintf("%s: File format is unknown or invalid, please fix it manually\n", __func__);
+                LOG_INFO("%s: File format is unknown or invalid, please fix it manually\n", __func__);
                 // program should exit with an error
                 return false;
             }
@@ -197,28 +198,28 @@ public:
     {
         int64_t nStart = GetTimeMillis();
 
-        LogPrintf("Verifying %s format...\n", strFilename);
+        LOG_INFO("Verifying %s format...\n", strFilename);
         T tmpObjToLoad;
         ReadResult readResult = Read(tmpObjToLoad, true);
 
         // there was an error and it was not an error on file opening => do not proceed
         if (readResult == FileError)
-            LogPrintf("Missing file %s, will try to recreate\n", strFilename);
+            LOG_INFO("Missing file %s, will try to recreate\n", strFilename);
         else if (readResult != Ok)
         {
-            LogPrintf("Error reading %s: ", strFilename);
+            LOG_INFO("Error reading %s: ", strFilename);
             if(readResult == IncorrectFormat)
-                LogPrintf("%s: Magic is ok but data has invalid format, will try to recreate\n", __func__);
+                LOG_INFO("%s: Magic is ok but data has invalid format, will try to recreate\n", __func__);
             else
             {
-                LogPrintf("%s: File format is unknown or invalid, please fix it manually\n", __func__);
+                LOG_INFO("%s: File format is unknown or invalid, please fix it manually\n", __func__);
                 return false;
             }
         }
 
-        LogPrintf("Writting info to %s...\n", strFilename);
+        LOG_INFO("Writting info to %s...\n", strFilename);
         Write(objToSave);
-        LogPrintf("%s dump finished  %dms\n", strFilename, GetTimeMillis() - nStart);
+        LOG_INFO("%s dump finished  %dms\n", strFilename, GetTimeMillis() - nStart);
 
         return true;
     }

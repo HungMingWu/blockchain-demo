@@ -51,7 +51,7 @@ const unsigned char MaxArray[] =
 const arith_uint256 MaxL = arith_uint256V(std::vector<unsigned char>(MaxArray, MaxArray + 32));
 
 const arith_uint256 HalfL = (OneL << 255);
-std::string ArrayToString(const unsigned char A[], unsigned int width)
+static std::string ArrayToString(const unsigned char A[], unsigned int width)
 {
 	std::stringstream Stream;
 	Stream << std::hex;
