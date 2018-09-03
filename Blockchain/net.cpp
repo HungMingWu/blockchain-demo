@@ -16,13 +16,13 @@
 #include "chainparams.h"
 #include "clientversion.h"
 #include "consensus/consensus.h"
-#include "crypto/common.h"
 #include "hash.h"
 #include "primitives/transaction.h"
 #include "scheduler.h"
 #include "ui_interface.h"
 #include "wallet/wallet.h"
 #include "utilstrencodings.h"
+#include "ByteOrder.h"
 
 #include "privsend.h"
 #include "instantx.h"
@@ -2599,7 +2599,7 @@ void CNode::EndMessage() UNLOCK_FUNCTION(cs_vSend)
     }
     // Set the size
     unsigned int nSize = ssSend.size() - CMessageHeader::HEADER_SIZE;
-    WriteLE32((uint8_t*)&ssSend[CMessageHeader::MESSAGE_SIZE_OFFSET], nSize);
+    *(uint32_t *)((uint8_t*)&ssSend[CMessageHeader::MESSAGE_SIZE_OFFSET]) = htole32(nSize);
 
     // Set the checksum
     uint256 hash = Hash(ssSend.begin() + CMessageHeader::HEADER_SIZE, ssSend.end());

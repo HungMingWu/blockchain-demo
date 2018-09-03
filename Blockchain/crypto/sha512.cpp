@@ -2,11 +2,9 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "sha512.h"
-
-#include "common.h"
-
 #include <string.h>
+#include "../ByteOrder.h"
+#include "sha512.h"
 
 // Internal implementation code.
 namespace
@@ -49,22 +47,22 @@ void Transform(uint64_t* s, const unsigned char* chunk)
     uint64_t a = s[0], b = s[1], c = s[2], d = s[3], e = s[4], f = s[5], g = s[6], h = s[7];
     uint64_t w0, w1, w2, w3, w4, w5, w6, w7, w8, w9, w10, w11, w12, w13, w14, w15;
 
-    Round(a, b, c, d, e, f, g, h, 0x428a2f98d728ae22ull, w0 = ReadBE64(chunk + 0));
-    Round(h, a, b, c, d, e, f, g, 0x7137449123ef65cdull, w1 = ReadBE64(chunk + 8));
-    Round(g, h, a, b, c, d, e, f, 0xb5c0fbcfec4d3b2full, w2 = ReadBE64(chunk + 16));
-    Round(f, g, h, a, b, c, d, e, 0xe9b5dba58189dbbcull, w3 = ReadBE64(chunk + 24));
-    Round(e, f, g, h, a, b, c, d, 0x3956c25bf348b538ull, w4 = ReadBE64(chunk + 32));
-    Round(d, e, f, g, h, a, b, c, 0x59f111f1b605d019ull, w5 = ReadBE64(chunk + 40));
-    Round(c, d, e, f, g, h, a, b, 0x923f82a4af194f9bull, w6 = ReadBE64(chunk + 48));
-    Round(b, c, d, e, f, g, h, a, 0xab1c5ed5da6d8118ull, w7 = ReadBE64(chunk + 56));
-    Round(a, b, c, d, e, f, g, h, 0xd807aa98a3030242ull, w8 = ReadBE64(chunk + 64));
-    Round(h, a, b, c, d, e, f, g, 0x12835b0145706fbeull, w9 = ReadBE64(chunk + 72));
-    Round(g, h, a, b, c, d, e, f, 0x243185be4ee4b28cull, w10 = ReadBE64(chunk + 80));
-    Round(f, g, h, a, b, c, d, e, 0x550c7dc3d5ffb4e2ull, w11 = ReadBE64(chunk + 88));
-    Round(e, f, g, h, a, b, c, d, 0x72be5d74f27b896full, w12 = ReadBE64(chunk + 96));
-    Round(d, e, f, g, h, a, b, c, 0x80deb1fe3b1696b1ull, w13 = ReadBE64(chunk + 104));
-    Round(c, d, e, f, g, h, a, b, 0x9bdc06a725c71235ull, w14 = ReadBE64(chunk + 112));
-    Round(b, c, d, e, f, g, h, a, 0xc19bf174cf692694ull, w15 = ReadBE64(chunk + 120));
+    Round(a, b, c, d, e, f, g, h, 0x428a2f98d728ae22ull, w0 = betoh64(*((uint64_t*)chunk + 0)));
+    Round(h, a, b, c, d, e, f, g, 0x7137449123ef65cdull, w1 = betoh64(*((uint64_t*)chunk + 8)));
+    Round(g, h, a, b, c, d, e, f, 0xb5c0fbcfec4d3b2full, w2 = betoh64(*((uint64_t*)chunk + 16)));
+    Round(f, g, h, a, b, c, d, e, 0xe9b5dba58189dbbcull, w3 = betoh64(*((uint64_t*)chunk + 24)));
+    Round(e, f, g, h, a, b, c, d, 0x3956c25bf348b538ull, w4 = betoh64(*((uint64_t*)chunk + 32)));
+    Round(d, e, f, g, h, a, b, c, 0x59f111f1b605d019ull, w5 = betoh64(*((uint64_t*)chunk + 40)));
+    Round(c, d, e, f, g, h, a, b, 0x923f82a4af194f9bull, w6 = betoh64(*((uint64_t*)chunk + 48)));
+    Round(b, c, d, e, f, g, h, a, 0xab1c5ed5da6d8118ull, w7 = betoh64(*((uint64_t*)chunk + 56)));
+    Round(a, b, c, d, e, f, g, h, 0xd807aa98a3030242ull, w8 = betoh64(*((uint64_t*)chunk + 64)));
+    Round(h, a, b, c, d, e, f, g, 0x12835b0145706fbeull, w9 = betoh64(*((uint64_t*)chunk + 72)));
+    Round(g, h, a, b, c, d, e, f, 0x243185be4ee4b28cull, w10 = betoh64(*((uint64_t*)chunk + 80)));
+    Round(f, g, h, a, b, c, d, e, 0x550c7dc3d5ffb4e2ull, w11 = betoh64(*((uint64_t*)chunk + 88)));
+    Round(e, f, g, h, a, b, c, d, 0x72be5d74f27b896full, w12 = betoh64(*((uint64_t*)chunk + 96)));
+    Round(d, e, f, g, h, a, b, c, 0x80deb1fe3b1696b1ull, w13 = betoh64(*((uint64_t*)chunk + 104)));
+    Round(c, d, e, f, g, h, a, b, 0x9bdc06a725c71235ull, w14 = betoh64(*((uint64_t*)chunk + 112)));
+    Round(b, c, d, e, f, g, h, a, 0xc19bf174cf692694ull, w15 = betoh64(*((uint64_t*)chunk + 120)));
 
     Round(a, b, c, d, e, f, g, h, 0xe49b69c19ef14ad2ull, w0 += sigma1(w14) + w9 + sigma0(w1));
     Round(h, a, b, c, d, e, f, g, 0xefbe4786384f25e3ull, w1 += sigma1(w15) + w10 + sigma0(w2));
@@ -187,17 +185,17 @@ void CSHA512::Finalize(unsigned char hash[OUTPUT_SIZE])
 {
     static const unsigned char pad[128] = {0x80};
     unsigned char sizedesc[16] = {0x00};
-    WriteBE64(sizedesc + 8, bytes << 3);
+	*(uint64_t *)(sizedesc + 8) = htobe64(bytes << 3);
     Write(pad, 1 + ((239 - (bytes % 128)) % 128));
     Write(sizedesc, 16);
-    WriteBE64(hash, s[0]);
-    WriteBE64(hash + 8, s[1]);
-    WriteBE64(hash + 16, s[2]);
-    WriteBE64(hash + 24, s[3]);
-    WriteBE64(hash + 32, s[4]);
-    WriteBE64(hash + 40, s[5]);
-    WriteBE64(hash + 48, s[6]);
-    WriteBE64(hash + 56, s[7]);
+	*(uint64_t *)(hash) = htobe64(s[0]);
+	*(uint64_t *)(hash + 8) = htobe64(s[1]);
+	*(uint64_t *)(hash + 16) = htobe64(s[2]);
+	*(uint64_t *)(hash + 24) = htobe64(s[3]);
+	*(uint64_t *)(hash + 32) = htobe64(s[4]);
+	*(uint64_t *)(hash + 40) = htobe64(s[5]);
+	*(uint64_t *)(hash + 48) = htobe64(s[6]);
+	*(uint64_t *)(hash + 56) = htobe64(s[7]);
 }
 
 CSHA512& CSHA512::Reset()

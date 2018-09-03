@@ -7027,7 +7027,7 @@ bool ProcessMessages(CNode* pfrom)
         // Checksum
         CDataStream& vRecv = msg.vRecv;
         uint256 hash = Hash(vRecv.begin(), vRecv.begin() + nMessageSize);
-        unsigned int nChecksum = ReadLE32((unsigned char*)&hash);
+        unsigned int nChecksum = letoh32(*((uint32_t*)(&hash)));
         if (nChecksum != hdr.nChecksum)
         {
             LOG_INFO("%s(%s, %u bytes): CHECKSUM ERROR nChecksum=%08x hdr.nChecksum=%08x\n", __func__,

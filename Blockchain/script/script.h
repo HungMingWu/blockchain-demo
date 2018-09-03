@@ -6,9 +6,6 @@
 #ifndef BITCOIN_SCRIPT_SCRIPT_H
 #define BITCOIN_SCRIPT_SCRIPT_H
 
-#include "../crypto/common.h"
-#include "../prevector.h"
-
 #include <assert.h>
 #include <climits>
 #include <limits>
@@ -17,6 +14,9 @@
 #include <string.h>
 #include <string>
 #include <vector>
+
+#include "../prevector.h"
+#include "../ByteOrder.h"
 
 // Maximum number of bytes pushable to the stack
 static const unsigned int MAX_SCRIPT_ELEMENT_SIZE = 520;
@@ -452,14 +452,14 @@ public:
         {
             insert(end(), OP_PUSHDATA2);
             uint8_t data[2];
-            WriteLE16(data, b.size());
+			*(uint32_t *)(data) = htole16(b.size());
             insert(end(), data, data + sizeof(data));
         }
         else
         {
             insert(end(), OP_PUSHDATA4);
             uint8_t data[4];
-            WriteLE32(data, b.size());
+            *(uint32_t *)(data) = htole32(b.size());
             insert(end(), data, data + sizeof(data));
         }
         insert(end(), b.begin(), b.end());
@@ -533,14 +533,14 @@ public:
             {
                 if (end() - pc < 2)
                     return false;
-                nSize = ReadLE16(&pc[0]);
+                nSize = letoh16(*(uint16_t *)(&pc[0]));
                 pc += 2;
             }
             else if (opcode == OP_PUSHDATA4)
             {
                 if (end() - pc < 4)
                     return false;
-                nSize = ReadLE32(&pc[0]);
+                nSize = letoh32(*(uint32_t *)(&pc[0]));
                 pc += 4;
             }
             if (end() - pc < 0 || (unsigned int)(end() - pc) < nSize)

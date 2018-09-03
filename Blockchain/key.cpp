@@ -5,10 +5,10 @@
 #include "key.h"
 
 #include "arith_uint256.h"
-#include "crypto/common.h"
 #include "crypto/hmac_sha512.h"
 #include "pubkey.h"
 #include "random.h"
+#include "ByteOrder.h"
 
 #include <secp256k1.h>
 #include <secp256k1_recovery.h>
@@ -172,7 +172,7 @@ bool CKey::Sign(const uint256 &hash, std::vector<unsigned char>& vchSig, uint32_
     vchSig.resize(72);
     size_t nSigLen = 72;
     unsigned char extra_entropy[32] = {0};
-    WriteLE32(extra_entropy, test_case);
+	*(uint32_t *)(extra_entropy) = htole32(test_case);
     secp256k1_ecdsa_signature sig;
     int ret = secp256k1_ecdsa_sign(secp256k1_context_sign, &sig, hash.begin(), begin(), secp256k1_nonce_function_rfc6979, test_case ? extra_entropy : NULL);
     assert(ret);

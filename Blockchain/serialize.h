@@ -6,8 +6,6 @@
 #ifndef BITCOIN_SERIALIZE_H
 #define BITCOIN_SERIALIZE_H
 
-#include "compat/endian.h"
-
 #include <algorithm>
 #include <assert.h>
 #include <ios>
@@ -22,6 +20,7 @@
 #include <vector>
 
 #include "prevector.h"
+#include "ByteOrder.h"
 
 static const unsigned int MAX_SIZE = 0x02000000;
 
@@ -83,25 +82,25 @@ template<typename Stream> inline uint16_t ser_readdata16(Stream &s)
 {
 	uint16_t obj;
 	s.read((char*)&obj, 2);
-	return le16toh(obj);
+	return letoh16(obj);
 }
 template<typename Stream> inline uint32_t ser_readdata32(Stream &s)
 {
 	uint32_t obj;
 	s.read((char*)&obj, 4);
-	return le32toh(obj);
+	return letoh32(obj);
 }
 template<typename Stream> inline uint32_t ser_readdata32be(Stream &s)
 {
 	uint32_t obj;
 	s.read((char*)&obj, 4);
-	return be32toh(obj);
+	return betoh32(obj);
 }
 template<typename Stream> inline uint64_t ser_readdata64(Stream &s)
 {
 	uint64_t obj;
 	s.read((char*)&obj, 8);
-	return le64toh(obj);
+	return letoh64(obj);
 }
 inline uint64_t ser_double_to_uint64(double x)
 {

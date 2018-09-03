@@ -4,7 +4,6 @@
 
 #include "hash.h"
 #include "hello/PoW.h"
-#include "crypto/common.h"
 #include "crypto/hmac_sha512.h"
 #include "pubkey.h"
 
@@ -30,7 +29,7 @@ unsigned int MurmurHash3(unsigned int nHashSeed, const std::vector<unsigned char
         const uint8_t* blocks = &vDataToHash[0] + nblocks * 4;
 
         for (int i = -nblocks; i; i++) {
-            uint32_t k1 = ReadLE32(blocks + i*4);
+			uint32_t k1 = letoh32(*((uint32_t*)(blocks + i * 4)));
 
             k1 *= c1;
             k1 = ROTL32(k1, 15);

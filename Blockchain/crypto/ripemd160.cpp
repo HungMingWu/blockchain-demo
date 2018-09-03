@@ -2,11 +2,11 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#include <string.h>
+
+#include "../ByteOrder.h"
 #include "ripemd160.h"
 
-#include "common.h"
-
-#include <string.h>
 
 // Internal implementation code.
 namespace
@@ -55,10 +55,22 @@ void Transform(uint32_t* s, const unsigned char* chunk)
 {
     uint32_t a1 = s[0], b1 = s[1], c1 = s[2], d1 = s[3], e1 = s[4];
     uint32_t a2 = a1, b2 = b1, c2 = c1, d2 = d1, e2 = e1;
-    uint32_t w0 = ReadLE32(chunk + 0), w1 = ReadLE32(chunk + 4), w2 = ReadLE32(chunk + 8), w3 = ReadLE32(chunk + 12);
-    uint32_t w4 = ReadLE32(chunk + 16), w5 = ReadLE32(chunk + 20), w6 = ReadLE32(chunk + 24), w7 = ReadLE32(chunk + 28);
-    uint32_t w8 = ReadLE32(chunk + 32), w9 = ReadLE32(chunk + 36), w10 = ReadLE32(chunk + 40), w11 = ReadLE32(chunk + 44);
-    uint32_t w12 = ReadLE32(chunk + 48), w13 = ReadLE32(chunk + 52), w14 = ReadLE32(chunk + 56), w15 = ReadLE32(chunk + 60);
+	uint32_t w0 = letoh32(*((uint32_t*)chunk + 0)),
+		w1 = letoh32(*((uint32_t*)chunk + 4)),
+		w2 = letoh32(*((uint32_t*)chunk + 8)),
+		w3 = letoh32(*((uint32_t*)chunk + 12));
+	uint32_t w4 = letoh32(*((uint32_t*)chunk + 16)),
+		w5 = letoh32(*((uint32_t*)chunk + 20)),
+		w6 = letoh32(*((uint32_t*)chunk + 24)),
+		w7 = letoh32(*((uint32_t*)chunk + 28));
+	uint32_t w8 = letoh32(*((uint32_t*)chunk + 32)),
+		w9 = letoh32(*((uint32_t*)chunk + 36)),
+		w10 = letoh32(*((uint32_t*)chunk + 40)),
+		w11 = letoh32(*((uint32_t*)chunk + 44));
+	uint32_t w12 = letoh32(*((uint32_t*)chunk + 48)),
+		w13 = letoh32(*((uint32_t*)chunk + 52)),
+		w14 = letoh32(*((uint32_t*)chunk + 56)),
+		w15 = letoh32(*((uint32_t*)chunk + 60));
 
     R11(a1, b1, c1, d1, e1, w0, 11);
     R12(a2, b2, c2, d2, e2, w5, 8);
@@ -275,14 +287,14 @@ void CRIPEMD160::Finalize(unsigned char hash[OUTPUT_SIZE])
 {
     static const unsigned char pad[64] = {0x80};
     unsigned char sizedesc[8];
-    WriteLE64(sizedesc, bytes << 3);
+	*(uint64_t *)(sizedesc) = htole64(bytes << 3);
     Write(pad, 1 + ((119 - (bytes % 64)) % 64));
     Write(sizedesc, 8);
-    WriteLE32(hash, s[0]);
-    WriteLE32(hash + 4, s[1]);
-    WriteLE32(hash + 8, s[2]);
-    WriteLE32(hash + 12, s[3]);
-    WriteLE32(hash + 16, s[4]);
+	*(uint32_t *)(hash) = htole64(s[0]);
+	*(uint32_t *)(hash + 4) = htole64(s[1]);
+	*(uint32_t *)(hash + 8) = htole64(s[2]);
+	*(uint32_t *)(hash + 12) = htole64(s[3]);
+	*(uint32_t *)(hash + 16) = htole64(s[4]);
 }
 
 CRIPEMD160& CRIPEMD160::Reset()

@@ -13,7 +13,8 @@
 #include <stdint.h>
 #include <string>
 #include <vector>
-#include "crypto/common.h"
+
+#include "ByteOrder.h"
 
 /** Template base class for fixed-sized opaque blobs. */
 template<unsigned int BITS>
@@ -124,7 +125,7 @@ public:
      */
     uint64_t GetCheapHash() const
     {
-        return ReadLE64(data);
+        return letoh64(data);
     }
 
     /** A more secure, salted hash function.
