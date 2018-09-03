@@ -9,6 +9,7 @@
 #include "ui_interface.h"
 #include "util.h"
 #include "utilstrencodings.h"
+#include "Log.h"
 
 using namespace std;
 
@@ -53,7 +54,7 @@ void AddTimeData(const CNetAddr& ip, int64_t nOffsetSample)
     // Add data
     static CMedianFilter<int64_t> vTimeOffsets(BITCOIN_TIMEDATA_MAX_SAMPLES, 0);
     vTimeOffsets.input(nOffsetSample);
-    LogPrint("net","added time data, samples %d, offset %+d (%+d minutes)\n", vTimeOffsets.size(), nOffsetSample, nOffsetSample/60);
+    LOG_INFO("added time data, samples %d, offset %+d (%+d minutes)\n", vTimeOffsets.size(), nOffsetSample, nOffsetSample/60);
 
     // There is a known issue here (see issue #4521):
     //
@@ -97,7 +98,7 @@ void AddTimeData(const CNetAddr& ip, int64_t nOffsetSample)
                 if (!fMatch)
                 {
                     fDone = true;
-                    string strMessage = _("Please check that your computer's date and time are correct! If your clock is wrong Ulord Core will not work properly.");
+                    string strMessage = "Please check that your computer's date and time are correct! If your clock is wrong Ulord Core will not work properly.";
                     strMiscWarning = strMessage;
                     uiInterface.ThreadSafeMessageBox(strMessage, "", CClientUIInterface::MSG_WARNING);
                 }
@@ -105,9 +106,9 @@ void AddTimeData(const CNetAddr& ip, int64_t nOffsetSample)
         }
         
         for (int64_t n : vSorted)
-            LogPrint("net", "%+d  ", n);
-        LogPrint("net", "|  ");
+			LOG_INFO("%+d  ", n);
+		LOG_INFO("|  ");
         
-        LogPrint("net", "nTimeOffset = %+d  (%+d minutes)\n", nTimeOffset, nTimeOffset/60);
+		LOG_INFO("nTimeOffset = %+d  (%+d minutes)\n", nTimeOffset, nTimeOffset/60);
     }
 }

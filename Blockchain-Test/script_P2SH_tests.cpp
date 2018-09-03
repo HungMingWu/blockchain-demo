@@ -99,35 +99,33 @@ TEST_CASE("sign")
 		txTo[i].vin[0].prevout.hash = txFrom.GetHash();
 		txTo[i].vout[0].nValue = 1;
 #ifdef ENABLE_WALLET
-		BOOST_CHECK_MESSAGE(IsMine(keystore, txFrom.vout[i].scriptPubKey), strprintf("IsMine %d", i));
+		BOOST_CHECK_MESSAGE(IsMine(keystore, txFrom.vout[i].scriptPubKey), fmt::format("IsMine %d", i));
 #endif
 	}
 	for (int i = 0; i < 8; i++)
 	{
-		SECTION(strprintf("SignSignature %d", i)) {
+		SECTION(fmt::format("SignSignature %d", i)) {
 			REQUIRE(SignSignature(keystore, txFrom, txTo[i], 0));
 		}
 	}
 	// All of the above should be OK, and the txTos have valid signatures
 	// Check to make sure signature verification fails if we use the wrong ScriptSig:
-	for (int i = 0; i < 8; i++)
-		for (int j = 0; j < 8; j++)
-		{
-			CScript sigSave = txTo[i].vin[0].scriptSig;
-			txTo[i].vin[0].scriptSig = txTo[j].vin[0].scriptSig;
-			bool sigOK = CScriptCheck(CCoins(txFrom, 0), txTo[i], 0, SCRIPT_VERIFY_P2SH | SCRIPT_VERIFY_STRICTENC, false)();
-			if (i == j) {
-				SECTION(strprintf("VerifySignature %d %d", i, j)) {
+	SECTION("VerifySignature") {
+		for (int i = 0; i < 8; i++)
+			for (int j = 0; j < 8; j++)
+			{
+				CScript sigSave = txTo[i].vin[0].scriptSig;
+				txTo[i].vin[0].scriptSig = txTo[j].vin[0].scriptSig;
+				bool sigOK = CScriptCheck(CCoins(txFrom, 0), txTo[i], 0, SCRIPT_VERIFY_P2SH | SCRIPT_VERIFY_STRICTENC, false)();
+				if (i == j) {
 					REQUIRE(sigOK);
 				}
-			}
-			else {
-				SECTION(strprintf("VerifySignature %d %d", i, j)) {
+				else {
 					REQUIRE(!sigOK);
 				}
+				txTo[i].vin[0].scriptSig = sigSave;
 			}
-			txTo[i].vin[0].scriptSig = sigSave;
-		}
+	}
 }
 
 TEST_CASE("norecurse")
@@ -208,15 +206,15 @@ TEST_CASE("set")
 		txTo[i].vout[0].nValue = 1 * CENT;
 		txTo[i].vout[0].scriptPubKey = inner[i];
 #ifdef ENABLE_WALLET
-		BOOST_CHECK_MESSAGE(IsMine(keystore, txFrom.vout[i].scriptPubKey), strprintf("IsMine %d", i));
+		BOOST_CHECK_MESSAGE(IsMine(keystore, txFrom.vout[i].scriptPubKey), fmt::format("IsMine %d", i));
 #endif
 	}
 	for (int i = 0; i < 4; i++)
 	{
-		SECTION(strprintf("SignSignature %d", i)) {
+		SECTION(fmt::format("SignSignature %d", i)) {
 			REQUIRE(SignSignature(keystore, txFrom, txTo[i], 0));
 		}
-		SECTION(strprintf("txTo[%d].IsStandard", i)) {
+		SECTION(fmt::format("txTo[%d].IsStandard", i)) {
 			REQUIRE(IsStandardTx(txTo[i], reason));
 		}
 	}

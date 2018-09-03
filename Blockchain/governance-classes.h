@@ -11,6 +11,7 @@
 #include "key.h"
 #include "script/standard.h"
 #include "util.h"
+#include "Log.h"
 
 #include <boost/shared_ptr.hpp>
 
@@ -114,12 +115,12 @@ public:
         }
         catch(std::exception& e)
         {
-            LogPrintf("CGovernancePayment Payment not valid: addrIn = %s, nAmountIn = %d, what = %s\n",
+            LOG_INFO("CGovernancePayment Payment not valid: addrIn = %s, nAmountIn = %d, what = %s\n",
                      addrIn.ToString(), nAmountIn, e.what());
         }
         catch(...)
         {
-            LogPrintf("CGovernancePayment Payment not valid: addrIn = %s, nAmountIn = %d\n",
+            LOG_INFO("CGovernancePayment Payment not valid: addrIn = %s, nAmountIn = %d\n",
                       addrIn.ToString(), nAmountIn);
         }
     }

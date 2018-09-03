@@ -5,17 +5,17 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#include <spdlog/fmt/fmt.h>
+
 #include "base58.h"
 #include "chainparams.h"
 #include "consensus/merkle.h"
 
-#include "tinyformat.h"
 #include "util.h"
 #include "utilstrencodings.h"
 
 #include <assert.h>
 
-#include <boost/assign/list_of.hpp>
 #include "arith_uint256.h"
 #include "chainparamsseeds.h"
 
@@ -269,11 +269,11 @@ public:
         // Ulord private keys start with '5' or 'K' or 'L'(as in Bitcoin)
         base58Prefixes[SECRET_KEY] =     std::vector<unsigned char>(1,0x80);
         // Ulord BIP32 pubkeys start with 'xpub' (Bitcoin defaults)
-        base58Prefixes[EXT_PUBLIC_KEY] = boost::assign::list_of(0x04)(0x88)(0xB2)(0x1E).convert_to_container<std::vector<unsigned char> >();
+        base58Prefixes[EXT_PUBLIC_KEY] = std::vector<unsigned char>{ 0x04, 0x88, 0xB2, 0x1E };
         // Ulord BIP32 prvkeys start with 'xprv' (Bitcoin defaults)
-        base58Prefixes[EXT_SECRET_KEY] = boost::assign::list_of(0x04)(0x88)(0xAD)(0xE4).convert_to_container<std::vector<unsigned char> >();
+		base58Prefixes[EXT_SECRET_KEY] = std::vector<unsigned char>{ 0x04, 0x88, 0xAD, 0xE4 };
         // Ulord BIP44 coin type is '247'
-        base58Prefixes[EXT_COIN_TYPE]  = boost::assign::list_of(0x80)(0x00)(0x00)(0xf7).convert_to_container<std::vector<unsigned char> >();
+		base58Prefixes[EXT_COIN_TYPE] = std::vector<unsigned char>{ 0x80, 0x00, 0x00, 0xf7 };
 
         //vFixedSeeds = std::vector<SeedSpec6>(pnSeed6_main, pnSeed6_main + ARRAYLEN(pnSeed6_main));
         vFixedSeeds.clear();
@@ -413,11 +413,11 @@ public:
         // Testnet private keys start with '9' or 'c'(as in Bitcoin)
         base58Prefixes[SECRET_KEY] =     std::vector<unsigned char>(1,0xef);
         // Testnet Ulord BIP32 pubkeys start with 'tpub' (Bitcoin defaults)
-        base58Prefixes[EXT_PUBLIC_KEY] = boost::assign::list_of(0x04)(0x35)(0x87)(0xCF).convert_to_container<std::vector<unsigned char> >();
+		base58Prefixes[EXT_PUBLIC_KEY] = std::vector<unsigned char>{ 0x04, 0x35,0x87,0xCF };
         // Testnet Ulord BIP32 prvkeys start with 'tprv' (Bitcoin defaults)
-        base58Prefixes[EXT_SECRET_KEY] = boost::assign::list_of(0x04)(0x35)(0x83)(0x94).convert_to_container<std::vector<unsigned char> >();
+		base58Prefixes[EXT_SECRET_KEY] = std::vector<unsigned char>{ 0x04,0x35,0x83,0x94 };
         // Testnet Ulord BIP44 coin type is '1' (All coin's testnet default)
-        base58Prefixes[EXT_COIN_TYPE]  = boost::assign::list_of(0x80)(0x00)(0x00)(0x01).convert_to_container<std::vector<unsigned char> >();
+		base58Prefixes[EXT_COIN_TYPE] = std::vector<unsigned char>{ 0x80,0x00, 0x00, 0x01 };
 
         //vFixedSeeds = std::vector<SeedSpec6>(pnSeed6_test, pnSeed6_test + ARRAYLEN(pnSeed6_test));
 
@@ -549,12 +549,11 @@ public:
         // Regtest private keys start with 'm'
         base58Prefixes[SECRET_KEY] =     std::vector<unsigned char>(1,0xef);
         // Regtest Ulord BIP32 pubkeys start with 'tpub' (Bitcoin defaults)
-        base58Prefixes[EXT_PUBLIC_KEY] = boost::assign::list_of(0x04)(0x35)(0x87)(0xCF).convert_to_container<std::vector<unsigned char> >();
+		base58Prefixes[EXT_PUBLIC_KEY] = std::vector<unsigned char>{ 0x04, 0x35, 0x87, 0xCF };
         // Regtest Ulord BIP32 prvkeys start with 'tprv' (Bitcoin defaults)
-        base58Prefixes[EXT_SECRET_KEY] = boost::assign::list_of(0x04)(0x35)(0x83)(0x94).convert_to_container<std::vector<unsigned char> >();
+		base58Prefixes[EXT_SECRET_KEY] = std::vector<unsigned char>{ 0x04, 0x35, 0x83, 0x94 };
         // Regtest Ulord BIP44 coin type is '1' (All coin's testnet default)
-        base58Prefixes[EXT_COIN_TYPE]  = boost::assign::list_of(0x80)(0x00)(0x00)(0x01).convert_to_container<std::vector<unsigned char> >();
-
+		base58Prefixes[EXT_COIN_TYPE] = std::vector<unsigned char>{ 0x80, 0x00,0x00,0x01 };
         // Founders reward script expects a vector of 2-of-3 multisig addresses
         vFoundersRewardAddress = {"u2FwcEhFdNXuFMv1tcYwaBJtYVtMj8b1uTg"};
    }
@@ -577,7 +576,7 @@ CChainParams& Params(const std::string& chain)
     else if (chain == CBaseChainParams::REGTEST)
         return regTestParams;
     else
-        throw std::runtime_error(strprintf("%s: Unknown chain %s.", __func__, chain));
+        throw std::runtime_error(fmt::format("%s: Unknown chain %s.", __func__, chain));
 }
 
 void SelectParams(const std::string& network)

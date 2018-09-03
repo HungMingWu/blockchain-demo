@@ -1,6 +1,7 @@
 #include "nameclaim.h"
 #include "hash.h"
 #include "util.h"
+#include "Log.h"
 #include <string>
 
 using namespace std;
@@ -21,7 +22,7 @@ uint32_t vch_to_uint32_t(std::vector<unsigned char>& vchN)
     uint32_t n;
     if (vchN.size() != 4)
     {
-        LogPrintf("%s() : a vector<unsigned char> with size other than 4 has been given", __func__);
+        LOG_INFO("%s() : a vector<unsigned char> with size other than 4 has been given", __func__);
         return 0;
     }
     n = vchN[0] << 24 | vchN[1] << 16 | vchN[2] << 8 | vchN[3];

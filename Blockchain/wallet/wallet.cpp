@@ -5,6 +5,8 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#include <spdlog/fmt/fmt.h>
+
 #include "wallet.h"
 
 #include "../base58.h"
@@ -26,6 +28,7 @@
 #include "../txmempool.h"
 #include "../util.h"
 #include "../utilmoneystr.h"
+#include "../Log.h"
 
 #include "../masternodeconfig.h"
 #include "../privsend.h"
@@ -80,7 +83,7 @@ struct CompareValueOnly
 
 std::string COutput::ToString() const
 {
-    return strprintf("COutput(%s, %d, %d) [%s]", tx->GetHash().ToString(), i, nDepth, FormatMoney(tx->vout[i].nValue));
+    return fmt::format("COutput(%s, %d, %d) [%s]", tx->GetHash().ToString(), i, nDepth, FormatMoney(tx->vout[i].nValue));
 }
 
 int COutput::Priority() const
@@ -206,7 +209,7 @@ bool CWallet::LoadCScript(const CScript& redeemScript)
     if (redeemScript.size() > MAX_SCRIPT_ELEMENT_SIZE)
     {
         std::string strAddr = CBitcoinAddress(CScriptID(redeemScript)).ToString();
-        LogPrintf("%s: Warning: This wallet contains a redeemScript of size %i which exceeds maximum size %i thus can never be redeemed. Do not use address %s.\n",
+        LOG_INFO("%s: Warning: This wallet contains a redeemScript of size %i which exceeds maximum size %i thus can never be redeemed. Do not use address %s.\n",
             __func__, redeemScript.size(), MAX_SCRIPT_ELEMENT_SIZE, strAddr);
         return true;
     }
@@ -256,7 +259,7 @@ bool CWallet::Unlock(const SecureString& strWalletPassphrase, bool fForMixingOnl
         try {
             strWalletPassphraseFinal = keePassInt.retrievePassphrase();
         } catch (std::exception& e) {
-            LogPrintf("CWallet::Unlock could not retrieve passphrase from KeePass: Error: %s\n", e.what());
+            LOG_INFO("CWallet::Unlock could not retrieve passphrase from KeePass: Error: %s\n", e.what());
             return false;
         }
     } else {
@@ -277,7 +280,7 @@ bool CWallet::Unlock(const SecureString& strWalletPassphrase, bool fForMixingOnl
             if (CCryptoKeyStore::Unlock(vMasterKey, fForMixingOnly)) {
                 if(nWalletBackups == -2) {
                     TopUpKeyPool();
-                    LogPrintf("Keypool replenished, re-initializing automatic backups.\n");
+                    LOG_INFO("Keypool replenished, re-initializing automatic backups.\n");
                     nWalletBackups = GetArg("-createwalletbackups", 10);
                 }
                 return true;
@@ -300,7 +303,7 @@ bool CWallet::ChangeWalletPassphrase(const SecureString& strOldWalletPassphrase,
         try {
             strOldWalletPassphraseFinal = keePassInt.retrievePassphrase();
         } catch (std::exception& e) {
-            LogPrintf("CWallet::ChangeWalletPassphrase -- could not retrieve passphrase from KeePass: Error: %s\n", e.what());
+            LOG_INFO("CWallet::ChangeWalletPassphrase -- could not retrieve passphrase from KeePass: Error: %s\n", e.what());
             return false;
         }
     } else {
@@ -332,7 +335,7 @@ bool CWallet::ChangeWalletPassphrase(const SecureString& strOldWalletPassphrase,
                 if (pMasterKey.second.nDeriveIterations < 25000)
                     pMasterKey.second.nDeriveIterations = 25000;
 
-                LogPrintf("Wallet passphrase changed to an nDeriveIterations of %i\n", pMasterKey.second.nDeriveIterations);
+                LOG_INFO("Wallet passphrase changed to an nDeriveIterations of %i\n", pMasterKey.second.nDeriveIterations);
 
                 if (!crypter.SetKeyFromPassphrase(strNewWalletPassphrase, pMasterKey.second.vchSalt, pMasterKey.second.nDeriveIterations, pMasterKey.second.nDerivationMethod))
                     return false;
@@ -344,11 +347,11 @@ bool CWallet::ChangeWalletPassphrase(const SecureString& strOldWalletPassphrase,
 
                 // Update KeePass if necessary
                 if(bUseKeePass) {
-                    LogPrintf("CWallet::ChangeWalletPassphrase -- Updating KeePass with new passphrase");
+                    LOG_INFO("CWallet::ChangeWalletPassphrase -- Updating KeePass with new passphrase");
                     try {
                         keePassInt.updatePassphrase(strNewWalletPassphrase);
                     } catch (std::exception& e) {
-                        LogPrintf("CWallet::ChangeWalletPassphrase -- could not update passphrase in KeePass: Error: %s\n", e.what());
+                        LOG_INFO("CWallet::ChangeWalletPassphrase -- could not update passphrase in KeePass: Error: %s\n", e.what());
                         return false;
                     }
                 }
@@ -443,10 +446,10 @@ bool CWallet::Verify(const string& walletFile, string& warningString, string& er
     {
         // try moving the database env out of the way
         boost::filesystem::path pathDatabase = GetDataDir() / "database";
-        boost::filesystem::path pathDatabaseBak = GetDataDir() / strprintf("database.%d.bak", GetTime());
+        boost::filesystem::path pathDatabaseBak = GetDataDir() / fmt::format(("database.%d.bak", GetTime());
         try {
             boost::filesystem::rename(pathDatabase, pathDatabaseBak);
-            LogPrintf("Moved old %s to %s. Retrying.\n", pathDatabase.string(), pathDatabaseBak.string());
+            LOG_INFO("Moved old %s to %s. Retrying.\n", pathDatabase.string(), pathDatabaseBak.string());
         } catch (const boost::filesystem::filesystem_error&) {
             // failure is ok (well, not really, but it's not worse than what we started with)
         }
@@ -454,7 +457,7 @@ bool CWallet::Verify(const string& walletFile, string& warningString, string& er
         // try again
         if (!bitdb.Open(GetDataDir())) {
             // if it still fails, it probably means we can't even create the database env
-            string msg = strprintf(_("Error initializing wallet database environment %s!"), GetDataDir());
+            string msg = fmt::format((_("Error initializing wallet database environment %s!"), GetDataDir());
             errorString += msg;
             return true;
         }
@@ -472,7 +475,7 @@ bool CWallet::Verify(const string& walletFile, string& warningString, string& er
         CDBEnv::VerifyResult r = bitdb.Verify(walletFile, CWalletDB::Recover);
         if (r == CDBEnv::RECOVER_OK)
         {
-            warningString += strprintf(_("Warning: wallet.dat corrupt, data salvaged!"
+            warningString += fmt::format((_("Warning: wallet.dat corrupt, data salvaged!"
                                      " Original wallet.dat saved as wallet.{timestamp}.bak in %s; if"
                                      " your balance or transactions are incorrect you should"
                                      " restore from a backup."), GetDataDir());
@@ -594,7 +597,7 @@ bool CWallet::EncryptWallet(const SecureString& strWalletPassphrase)
     if (kMasterKey.nDeriveIterations < 25000)
         kMasterKey.nDeriveIterations = 25000;
 
-    LogPrintf("Encrypting Wallet with an nDeriveIterations of %i\n", kMasterKey.nDeriveIterations);
+    LOG_INFO("Encrypting Wallet with an nDeriveIterations of %i\n", kMasterKey.nDeriveIterations);
 
     if (!crypter.SetKeyFromPassphrase(strWalletPassphrase, kMasterKey.vchSalt, kMasterKey.nDeriveIterations, kMasterKey.nDerivationMethod))
         return false;
@@ -654,11 +657,11 @@ bool CWallet::EncryptWallet(const SecureString& strWalletPassphrase)
 
         // Update KeePass if necessary
         if(GetBoolArg("-keepass", false)) {
-            LogPrintf("CWallet::EncryptWallet -- Updating KeePass with new passphrase");
+            LOG_INFO("CWallet::EncryptWallet -- Updating KeePass with new passphrase");
             try {
                 keePassInt.updatePassphrase(strWalletPassphrase);
             } catch (std::exception& e) {
-                LogPrintf("CWallet::EncryptWallet -- could not update passphrase in KeePass: Error: %s\n", e.what());
+                LOG_INFO("CWallet::EncryptWallet -- could not update passphrase in KeePass: Error: %s\n", e.what());
             }
         }
 
@@ -766,7 +769,7 @@ bool CWallet::AddToWallet(const CWalletTx& wtxIn, bool fFromLoadWallet, CWalletD
                     wtx.nTimeSmart = std::max(latestEntry, std::min(blocktime, latestNow));
                 }
                 else
-                    LogPrintf("AddToWallet(): found %s in block %s not in index\n",
+                    LOG_INFO("AddToWallet(): found %s in block %s not in index\n",
                              wtxIn.GetHash().ToString(),
                              wtxIn.hashBlock.ToString());
             }
@@ -801,7 +804,7 @@ bool CWallet::AddToWallet(const CWalletTx& wtxIn, bool fFromLoadWallet, CWalletD
         }
 
         //// debug print
-        LogPrintf("AddToWallet %s  %s%s\n", wtxIn.GetHash().ToString(), (fInsertedNew ? "new" : ""), (fUpdated ? "update" : ""));
+        LOG_INFO("AddToWallet %s  %s%s\n", wtxIn.GetHash().ToString(), (fInsertedNew ? "new" : ""), (fUpdated ? "update" : ""));
 
         // Write to disk
         if (fInsertedNew || fUpdated)
@@ -845,7 +848,7 @@ bool CWallet::AddToWalletIfInvolvingMe(const CTransaction& tx, const CBlock* pbl
                 std::pair<TxSpends::const_iterator, TxSpends::const_iterator> range = mapTxSpends.equal_range(txin.prevout);
                 while (range.first != range.second) {
                     if (range.first->second != tx.GetHash()) {
-                        LogPrintf("Transaction %s (in block %s) conflicts with wallet transaction %s (both spend %s:%i)\n", tx.GetHash().ToString(), pblock->GetHash().ToString(), range.first->second.ToString(), range.first->first.hash.ToString(), range.first->first.n);
+                        LOG_INFO("Transaction %s (in block %s) conflicts with wallet transaction %s (both spend %s:%i)\n", tx.GetHash().ToString(), pblock->GetHash().ToString(), range.first->second.ToString(), range.first->first.hash.ToString(), range.first->first.n);
                         MarkConflicted(pblock->GetHash(), range.first->second);
                     }
                     range.first++;
@@ -1112,7 +1115,7 @@ int CWallet::GetRealInputPrivateSendRounds(CTxIn txin, int nRounds) const
         std::map<uint256, CMutableTransaction>::const_iterator mdwi = mDenomWtxes.find(hash);
         if (mdwi == mDenomWtxes.end()) {
             // not known yet, let's add it
-            LogPrint("privatesend", "GetRealInputPrivateSendRounds INSERTING %s\n", hash.ToString());
+            LOG_INFO("GetRealInputPrivateSendRounds INSERTING %s\n", hash.ToString());
             mDenomWtxes[hash] = CMutableTransaction(*wtx);
         } else if(mDenomWtxes[hash].vout[nout].nRounds != -10) {
             // found and it's not an initial value, just return it
@@ -1123,20 +1126,20 @@ int CWallet::GetRealInputPrivateSendRounds(CTxIn txin, int nRounds) const
         // bounds check
         if (nout >= wtx->vout.size()) {
             // should never actually hit this
-            LogPrint("privatesend", "GetRealInputPrivateSendRounds UPDATED   %s %3d %3d\n", hash.ToString(), nout, -4);
+            LOG_INFO("GetRealInputPrivateSendRounds UPDATED   %s %3d %3d\n", hash.ToString(), nout, -4);
             return -4;
         }
 
         if (IsCollateralAmount(wtx->vout[nout].nValue)) {
             mDenomWtxes[hash].vout[nout].nRounds = -3;
-            LogPrint("privatesend", "GetRealInputPrivateSendRounds UPDATED   %s %3d %3d\n", hash.ToString(), nout, mDenomWtxes[hash].vout[nout].nRounds);
+            LOG_INFO("GetRealInputPrivateSendRounds UPDATED   %s %3d %3d\n", hash.ToString(), nout, mDenomWtxes[hash].vout[nout].nRounds);
             return mDenomWtxes[hash].vout[nout].nRounds;
         }
 
         //make sure the final output is non-denominate
         if (!IsDenominatedAmount(wtx->vout[nout].nValue)) { //NOT DENOM
             mDenomWtxes[hash].vout[nout].nRounds = -2;
-            LogPrint("privatesend", "GetRealInputPrivateSendRounds UPDATED   %s %3d %3d\n", hash.ToString(), nout, mDenomWtxes[hash].vout[nout].nRounds);
+            LOG_INFO("GetRealInputPrivateSendRounds UPDATED   %s %3d %3d\n", hash.ToString(), nout, mDenomWtxes[hash].vout[nout].nRounds);
             return mDenomWtxes[hash].vout[nout].nRounds;
         }
 
@@ -1148,7 +1151,7 @@ int CWallet::GetRealInputPrivateSendRounds(CTxIn txin, int nRounds) const
         // this one is denominated but there is another non-denominated output found in the same tx
         if (!fAllDenoms) {
             mDenomWtxes[hash].vout[nout].nRounds = 0;
-            LogPrint("privatesend", "GetRealInputPrivateSendRounds UPDATED   %s %3d %3d\n", hash.ToString(), nout, mDenomWtxes[hash].vout[nout].nRounds);
+            LOG_INFO("GetRealInputPrivateSendRounds UPDATED   %s %3d %3d\n", hash.ToString(), nout, mDenomWtxes[hash].vout[nout].nRounds);
             return mDenomWtxes[hash].vout[nout].nRounds;
         }
 
@@ -1168,7 +1171,7 @@ int CWallet::GetRealInputPrivateSendRounds(CTxIn txin, int nRounds) const
         mDenomWtxes[hash].vout[nout].nRounds = fDenomFound
                 ? (nShortest >= 15 ? 16 : nShortest + 1) // good, we a +1 to the shortest one but only 16 rounds max allowed
                 : 0;            // too bad, we are the fist one in that chain
-        LogPrint("privatesend", "GetRealInputPrivateSendRounds UPDATED   %s %3d %3d\n", hash.ToString(), nout, mDenomWtxes[hash].vout[nout].nRounds);
+        LOG_INFO("GetRealInputPrivateSendRounds UPDATED   %s %3d %3d\n", hash.ToString(), nout, mDenomWtxes[hash].vout[nout].nRounds);
         return mDenomWtxes[hash].vout[nout].nRounds;
     }
 
@@ -1379,7 +1382,7 @@ void CWalletTx::GetAmounts(list<COutputEntry>& listReceived,
 
         if (!ExtractDestination(txout.scriptPubKey, address) && !txout.scriptPubKey.IsUnspendable())
         {
-            LogPrintf("CWalletTx::GetAmounts: Unknown transaction type found, txid %s\n",
+            LOG_INFO("CWalletTx::GetAmounts: Unknown transaction type found, txid %s\n",
                      this->GetHash().ToString());
             address = CNoDestination();
         }
@@ -1458,13 +1461,13 @@ int CWallet::ScanForWalletTransactions(CBlockIndex* pindexStart, bool fUpdate)
         while (pindex && nTimeFirstKey && (pindex->GetBlockTime() < (nTimeFirstKey - 7200)))
             pindex = chainActive.Next(pindex);
 
-        ShowProgress(_("Rescanning..."), 0); // show rescan progress in GUI as dialog or on splashscreen, if -rescan on startup
+        ShowProgress("Rescanning...", 0); // show rescan progress in GUI as dialog or on splashscreen, if -rescan on startup
         double dProgressStart = Checkpoints::GuessVerificationProgress(chainParams.Checkpoints(), pindex, false);
         double dProgressTip = Checkpoints::GuessVerificationProgress(chainParams.Checkpoints(), chainActive.Tip(), false);
         while (pindex)
         {
             if (pindex->nHeight % 100 == 0 && dProgressTip - dProgressStart > 0.0)
-                ShowProgress(_("Rescanning..."), std::max(1, std::min(99, (int)((Checkpoints::GuessVerificationProgress(chainParams.Checkpoints(), pindex, false) - dProgressStart) / (dProgressTip - dProgressStart) * 100))));
+                ShowProgress("Rescanning...", std::max(1, std::min(99, (int)((Checkpoints::GuessVerificationProgress(chainParams.Checkpoints(), pindex, false) - dProgressStart) / (dProgressTip - dProgressStart) * 100))));
 
             Opt<CBlock> block = ReadBlockFromDisk(*pindex, Params().GetConsensus());
             for (CTransaction& tx : block->vtx)
@@ -1475,10 +1478,10 @@ int CWallet::ScanForWalletTransactions(CBlockIndex* pindexStart, bool fUpdate)
             pindex = chainActive.Next(pindex);
             if (GetTime() >= nNow + 60) {
                 nNow = GetTime();
-                LogPrintf("Still rescanning. At block %d. Progress=%f\n", pindex->nHeight, Checkpoints::GuessVerificationProgress(chainParams.Checkpoints(), pindex));
+                LOG_INFO("Still rescanning. At block %d. Progress=%f\n", pindex->nHeight, Checkpoints::GuessVerificationProgress(chainParams.Checkpoints(), pindex));
             }
         }
-        ShowProgress(_("Rescanning..."), 100); // hide progress dialog in GUI
+        ShowProgress("Rescanning...", 100); // hide progress dialog in GUI
     }
     return ret;
 }
@@ -1522,7 +1525,7 @@ bool CWalletTx::RelayWalletTransaction(std::string strCommand)
     {
         if (GetDepthInMainChain() == 0 && !isAbandoned() && InMempool()) {
             uint256 hash = GetHash();
-            LogPrintf("Relaying wtx %s\n", hash.ToString());
+            LOG_INFO("Relaying wtx %s\n", hash.ToString());
 
             if(strCommand == NetMsgType::TXLOCKREQUEST) {
                 instantsend.ProcessTxLockRequest(((CTxLockRequest)*this));
@@ -1879,7 +1882,7 @@ void CWallet::ResendWalletTransactions(int64_t nBestBlockTime)
     // block was found:
     std::vector<uint256> relayed = ResendWalletTransactionsBefore(nBestBlockTime-5*60);
     if (!relayed.empty())
-        LogPrintf("%s: rebroadcast %u unconfirmed transactions\n", __func__, relayed.size());
+        LOG_INFO("%s: rebroadcast %u unconfirmed transactions\n", __func__, relayed.size());
 }
 
 /** @} */ // end of mapWallet
@@ -2337,7 +2340,7 @@ bool CWallet::SelectCoinsMinConf(const CAmount& nTargetValue, int nConfMine, int
     // try to find nondenom first to prevent unneeded spending of mixed coins
     for (unsigned int tryDenom = 0; tryDenom < 2; tryDenom++)
     {
-        LogPrint("selectcoins", "tryDenom: %d\n", tryDenom);
+        LOG_INFO("tryDenom: %d\n", tryDenom);
         vValue.clear();
         nTotalLower = 0;
         for (const COutput &output : vCoins)
@@ -2347,7 +2350,7 @@ bool CWallet::SelectCoinsMinConf(const CAmount& nTargetValue, int nConfMine, int
 
             const CWalletTx *pcoin = output.tx;
 
-//            if (fDebug) LogPrint("selectcoins", "value %s confirms %d\n", FormatMoney(pcoin->vout[output.i].nValue), output.nDepth);
+//            if (fDebug) LOG_INFO("value %s confirms %d\n", FormatMoney(pcoin->vout[output.i].nValue), output.nDepth);
             if (output.nDepth < (pcoin->IsFromMe(ISMINE_ALL) ? nConfMine : nConfTheirs))
                 continue;
 
@@ -2433,7 +2436,7 @@ bool CWallet::SelectCoinsMinConf(const CAmount& nTargetValue, int nConfMine, int
                 s += FormatMoney(vValue[i].first) + " ";
             }
         }
-        LogPrint("selectcoins", "%s - total %s\n", s, FormatMoney(nBest));
+        LOG_INFO("%s - total %s\n", s, FormatMoney(nBest));
     }
 
     return true;
@@ -2664,12 +2667,12 @@ bool CWallet::SelectCoinsGrouppedByAddresses(std::vector<CompactTallyItem>& vecT
     if(fAnonymizable) {
         if(fSkipDenominated && fAnonymizableTallyCachedNonDenom) {
             vecTallyRet = vecAnonymizableTallyCachedNonDenom;
-            LogPrint("selectcoins", "SelectCoinsGrouppedByAddresses - using cache for non-denom inputs\n");
+            LOG_INFO("SelectCoinsGrouppedByAddresses - using cache for non-denom inputs\n");
             return true;
         }
         if(!fSkipDenominated && fAnonymizableTallyCached) {
             vecTallyRet = vecAnonymizableTallyCached;
-            LogPrint("selectcoins", "SelectCoinsGrouppedByAddresses - using cache for all inputs\n");
+            LOG_INFO("SelectCoinsGrouppedByAddresses - using cache for all inputs\n");
             return true;
         }
     }
@@ -2738,8 +2741,8 @@ bool CWallet::SelectCoinsGrouppedByAddresses(std::vector<CompactTallyItem>& vecT
     // debug
     std::string strMessage = "SelectCoinsGrouppedByAddresses - vecTallyRet:\n";
     for (CompactTallyItem& item : vecTallyRet)
-        strMessage += strprintf("  %s %f\n", item.address.ToString().c_str(), float(item.nAmount)/COIN);
-    LogPrint("selectcoins", "%s", strMessage);
+        strMessage += fmt::format("  %s %f\n", item.address.ToString().c_str(), float(item.nAmount)/COIN);
+    LOG_INFO("%s", strMessage);
 
     return true;
 }
@@ -2815,7 +2818,7 @@ bool CWallet::GetMasternodeVinAndKeys(CTxIn& txinRet, CPubKey& pubKeyRet, CKey& 
     std::vector<COutput> vPossibleCoins;
     AvailableCoins(vPossibleCoins, true, NULL, false, ONLY_10000);
     if(vPossibleCoins.empty()) {
-        LogPrintf("CWallet::GetMasternodeVinAndKeys -- Could not locate any valid masternode vin\n");
+        LOG_INFO("CWallet::GetMasternodeVinAndKeys -- Could not locate any valid masternode vin\n");
         return false;
     }
 
@@ -2834,7 +2837,7 @@ bool CWallet::GetMasternodeVinAndKeys(CTxIn& txinRet, CPubKey& pubKeyRet, CKey& 
                 return GetVinAndKeysFromOutput(out, txinRet, pubKeyRet, keyRet);			
             }
         }
-        LogPrintf("CWallet::GetMasternodeVinAndKeys -- Could not locate the masternode configure vin, please check the masternode.conf\n");
+        LOG_INFO("CWallet::GetMasternodeVinAndKeys -- Could not locate the masternode configure vin, please check the masternode.conf\n");
         return false;
     }
 
@@ -2846,7 +2849,7 @@ bool CWallet::GetMasternodeVinAndKeys(CTxIn& txinRet, CPubKey& pubKeyRet, CKey& 
         if(out.tx->GetHash() == txHash && out.i == nOutputIndex) // found it!
             return GetVinAndKeysFromOutput(out, txinRet, pubKeyRet, keyRet);
 
-    LogPrintf("CWallet::GetMasternodeVinAndKeys -- Could not locate specified masternode vin\n");
+    LOG_INFO("CWallet::GetMasternodeVinAndKeys -- Could not locate specified masternode vin\n");
     return false;
 }
 
@@ -2866,12 +2869,12 @@ bool CWallet::GetVinAndKeysFromOutput(CTxOut vout, CTxIn& txinRet, CPubKey& pubK
 
     CKeyID keyID;
     if (!address2.GetKeyID(keyID)) {
-        LogPrintf("CWallet::GetVinAndKeysFromOutput -- Address does not refer to a key\n");
+        LOG_INFO("CWallet::GetVinAndKeysFromOutput -- Address does not refer to a key\n");
         return false;
     }
 
     if (!GetKey(keyID, keyRet)) {
-        LogPrintf ("CWallet::GetVinAndKeysFromOutput -- Private key for address is not known\n");
+        LOG_INFO ("CWallet::GetVinAndKeysFromOutput -- Private key for address is not known\n");
         return false;
     }
 
@@ -2896,12 +2899,12 @@ bool CWallet::GetVinAndKeysFromOutput(COutput out, CTxIn& txinRet, CPubKey& pubK
 
     CKeyID keyID;
     if (!address2.GetKeyID(keyID)) {
-        LogPrintf("CWallet::GetVinAndKeysFromOutput -- Address does not refer to a key\n");
+        LOG_INFO("CWallet::GetVinAndKeysFromOutput -- Address does not refer to a key\n");
         return false;
     }
 
     if (!GetKey(keyID, keyRet)) {
-        LogPrintf ("CWallet::GetVinAndKeysFromOutput -- Private key for address is not known\n");
+        LOG_INFO ("CWallet::GetVinAndKeysFromOutput -- Private key for address is not known\n");
         return false;
     }
 
@@ -3015,7 +3018,7 @@ bool CWallet::GetBudgetSystemCollateralTX(CWalletTx& tx, uint256 hash, CAmount a
     CCoinControl *coinControl=NULL;
     bool success = CreateTransaction(vecSend, tx, reservekey, nFeeRet, nChangePosRet, strFail, coinControl, true, ALL_COINS, fUseInstantSend);
     if(!success){
-        LogPrintf("CWallet::GetBudgetSystemCollateralTX -- Error: %s\n", strFail);
+        LOG_INFO("CWallet::GetBudgetSystemCollateralTX -- Error: %s\n", strFail);
         return false;
     }
 
@@ -3032,7 +3035,7 @@ bool CWallet::ConvertList(std::vector<CTxIn> vecTxIn, std::vector<CAmount>& vecA
                 vecAmounts.push_back(wtx.vout[txin.prevout.n].nValue);
             }
         } else {
-            LogPrintf("CWallet::ConvertList -- Couldn't find transaction\n");
+            LOG_INFO("CWallet::ConvertList -- Couldn't find transaction\n");
         }
     }
     return true;
@@ -3101,7 +3104,7 @@ bool CWallet::CreateTheAddrTrans(const vector<CRecipient>& vecSend, CWalletTx& w
     {
         if (nValue < 0 || recipient.nAmount < 0)
         {
-            strFailReason = _("Transaction amounts must be positive");
+            strFailReason = "Transaction amounts must be positive";
             return false;
         }
         nValue += recipient.nAmount;
@@ -3111,7 +3114,7 @@ bool CWallet::CreateTheAddrTrans(const vector<CRecipient>& vecSend, CWalletTx& w
     }
     if (vecSend.empty() || nValue < 0)
     {
-        strFailReason = _("Transaction amounts must be positive");
+        strFailReason = "Transaction amounts must be positive";
         return false;
     }
 
@@ -3196,12 +3199,12 @@ bool CWallet::CreateTheAddrTrans(const vector<CRecipient>& vecSend, CWalletTx& w
                         if (recipient.fSubtractFeeFromAmount && nFeeRet > 0)
                         {
                             if (txout.nValue < 0)
-                                strFailReason = _("The transaction amount is too small to pay the fee");
+                                strFailReason = "The transaction amount is too small to pay the fee";
                             else
-                                strFailReason = _("The transaction amount is too small to send after the fee has been deducted");
+                                strFailReason = "The transaction amount is too small to send after the fee has been deducted";
                         }
                         else
-                            strFailReason = _("Transaction amount too small");
+                            strFailReason = "Transaction amount too small";
                         return false;
                     }
                     txNew.vout.push_back(txout);
@@ -3214,7 +3217,7 @@ bool CWallet::CreateTheAddrTrans(const vector<CRecipient>& vecSend, CWalletTx& w
 		        const std::string ct = std::to_string(Params().GetConsensus().colleteral);
                 if (!select_coin_from_addr(vAvailableCoins,  nValueToSelect, setCoins, nValueIn, coinControl))
                 {
-                    strFailReason = _("Insufficient funds");
+                    strFailReason = "Insufficient funds";
                     return false;
                 }
 
@@ -3279,7 +3282,7 @@ bool CWallet::CreateTheAddrTrans(const vector<CRecipient>& vecSend, CWalletTx& w
                                     txNew.vout[i].nValue -= nDust;
                                     if (txNew.vout[i].IsDust(::minRelayTxFee))
                                     {
-                                        strFailReason = _("The transaction amount is too small to send after the fee has been deducted");
+                                        strFailReason = "The transaction amount is too small to send after the fee has been deducted";
                                         return false;
                                     }
                                     break;
@@ -3350,7 +3353,7 @@ bool CWallet::CreateTheAddrTrans(const vector<CRecipient>& vecSend, CWalletTx& w
 
                     if (!signSuccess)
                     {
-                        strFailReason = _("Signing transaction failed");
+                        strFailReason = "Signing transaction failed";
                         return false;
                     }
                     nIn++;
@@ -3370,7 +3373,7 @@ bool CWallet::CreateTheAddrTrans(const vector<CRecipient>& vecSend, CWalletTx& w
                 // Limit size
                 if (nBytes >= MAX_STANDARD_TX_SIZE)
                 {
-                    strFailReason = _("Transaction too large");
+                    strFailReason = "Transaction too large";
                     return false;
                 }
 
@@ -3401,7 +3404,7 @@ bool CWallet::CreateTheAddrTrans(const vector<CRecipient>& vecSend, CWalletTx& w
                 // because we must be at the maximum allowed fee.
                 if (nFeeNeeded < ::minRelayTxFee.GetFee(nBytes))
                 {
-                    strFailReason = _("Transaction too large for fee policy");
+                    strFailReason = "Transaction too large for fee policy";
                     return false;
                 }
 
@@ -3429,7 +3432,7 @@ bool CWallet::CreateTransaction(const vector<CRecipient>& vecSend, CWalletTx& wt
     {
         if (nValue < 0 || recipient.nAmount < 0)
         {
-            strFailReason = _("Transaction amounts must be positive");
+            strFailReason = "Transaction amounts must be positive";
             return false;
         }
         nValue += recipient.nAmount;
@@ -3439,7 +3442,7 @@ bool CWallet::CreateTransaction(const vector<CRecipient>& vecSend, CWalletTx& wt
     }
     if (vecSend.empty() || nValue < 0)
     {
-        strFailReason = _("Transaction amounts must be positive");
+        strFailReason = "Transaction amounts must be positive";
         return false;
     }
 
@@ -3519,12 +3522,12 @@ bool CWallet::CreateTransaction(const vector<CRecipient>& vecSend, CWalletTx& wt
                         if (recipient.fSubtractFeeFromAmount && nFeeRet > 0)
                         {
                             if (txout.nValue < 0)
-                                strFailReason = _("The transaction amount is too small to pay the fee");
+                                strFailReason = "The transaction amount is too small to pay the fee";
                             else
-                                strFailReason = _("The transaction amount is too small to send after the fee has been deducted");
+                                strFailReason = "The transaction amount is too small to send after the fee has been deducted";
                         }
                         else
-                            strFailReason = _("Transaction amount too small");
+                            strFailReason = "Transaction amount too small";
                         return false;
                     }
                     txNew.vout.push_back(txout);
@@ -3538,21 +3541,21 @@ bool CWallet::CreateTransaction(const vector<CRecipient>& vecSend, CWalletTx& wt
                 if (!SelectCoins(nValueToSelect, setCoins, nValueIn, coinControl, nCoinType, fUseInstantSend))
                 {
                     if (nCoinType == ONLY_NOT10000IFMN) {
-                        strFailReason = _(("Unable to locate enough funds for this transaction that are not equal " + ct  + " UT.").c_str());
+                        strFailReason = "Unable to locate enough funds for this transaction that are not equal " + ct  + " UT";
                     } else if (nCoinType == ONLY_NONDENOMINATED_NOT10000IFMN) {
-                        strFailReason = _("Unable to locate enough PrivateSend non-denominated funds for this transaction that are not equal 1000 UT.");
+                        strFailReason = "Unable to locate enough PrivateSend non-denominated funds for this transaction that are not equal 1000 UT.";
                     } else if (nCoinType == ONLY_DENOMINATED) {
-                        strFailReason = _("Unable to locate enough PrivateSend denominated funds for this transaction.");
-                        strFailReason += " " + _("PrivateSend uses exact denominated amounts to send funds, you might simply need to anonymize some more coins.");
+                        strFailReason = "Unable to locate enough PrivateSend denominated funds for this transaction.";
+                        strFailReason += " PrivateSend uses exact denominated amounts to send funds, you might simply need to anonymize some more coins.";
                     } else if (nValueIn < nValueToSelect) {
-                        strFailReason = _("Insufficient funds.");
+                        strFailReason = "Insufficient funds.";
                     }
                     if (fUseInstantSend) {
                         if (nValueIn > sporkManager.GetSporkValue(SPORK_5_INSTANTSEND_MAX_VALUE)*COIN) {
-                            strFailReason += " " + strprintf(_("InstantSend doesn't support sending values that high yet. Transactions are currently limited to %1 UT."), sporkManager.GetSporkValue(SPORK_5_INSTANTSEND_MAX_VALUE));
+                            strFailReason += " " + fmt::format("InstantSend doesn't support sending values that high yet. Transactions are currently limited to %1 UT.", sporkManager.GetSporkValue(SPORK_5_INSTANTSEND_MAX_VALUE));
                         } else {
                             // could be not true but most likely that's the reason
-                            strFailReason += " " + strprintf(_("InstantSend requires inputs with at least %d confirmations, you might need to wait a few minutes and try again."), INSTANTSEND_CONFIRMATIONS_REQUIRED);
+                            strFailReason += " " + fmt::format("InstantSend requires inputs with at least %d confirmations, you might need to wait a few minutes and try again.", INSTANTSEND_CONFIRMATIONS_REQUIRED);
                         }
                     }
 
@@ -3632,7 +3635,7 @@ bool CWallet::CreateTransaction(const vector<CRecipient>& vecSend, CWalletTx& wt
                                     txNew.vout[i].nValue -= nDust;
                                     if (txNew.vout[i].IsDust(::minRelayTxFee))
                                     {
-                                        strFailReason = _("The transaction amount is too small to send after the fee has been deducted");
+                                        strFailReason = "The transaction amount is too small to send after the fee has been deducted";
                                         return false;
                                     }
                                     break;
@@ -3703,7 +3706,7 @@ bool CWallet::CreateTransaction(const vector<CRecipient>& vecSend, CWalletTx& wt
 
                     if (!signSuccess)
                     {
-                        strFailReason = _("Signing transaction failed");
+                        strFailReason = "Signing transaction failed";
                         return false;
                     }
                     nIn++;
@@ -3723,7 +3726,7 @@ bool CWallet::CreateTransaction(const vector<CRecipient>& vecSend, CWalletTx& wt
                 // Limit size
                 if (nBytes >= MAX_STANDARD_TX_SIZE)
                 {
-                    strFailReason = _("Transaction too large");
+                    strFailReason = "Transaction too large";
                     return false;
                 }
 
@@ -3754,7 +3757,7 @@ bool CWallet::CreateTransaction(const vector<CRecipient>& vecSend, CWalletTx& wt
                 // because we must be at the maximum allowed fee.
                 if (nFeeNeeded < ::minRelayTxFee.GetFee(nBytes))
                 {
-                    strFailReason = _("Transaction too large for fee policy");
+                    strFailReason = "Transaction too large for fee policy";
                     return false;
                 }
 
@@ -3785,7 +3788,7 @@ bool CWallet::AbandonCash(const vector<CRecipient>& vecSend, CWalletTx& wtxNew, 
     {
         if (nValue < 0 || recipient.nAmount < 0)
         {
-            strFailReason = _("Transaction amounts must be positive");
+            strFailReason = "Transaction amounts must be positive";
             return false;
         }
         
@@ -3798,7 +3801,7 @@ bool CWallet::AbandonCash(const vector<CRecipient>& vecSend, CWalletTx& wtxNew, 
 
     if (vecSend.empty() || nValue < 0)
     {
-        strFailReason = _("Transaction amounts must be positive");
+        strFailReason = "Transaction amounts must be positive";
         return false;
     }
 
@@ -3852,12 +3855,12 @@ bool CWallet::AbandonCash(const vector<CRecipient>& vecSend, CWalletTx& wtxNew, 
                         if (recipient.fSubtractFeeFromAmount && nFeeRet > 0)
                         {
                             if (txout.nValue < 0)
-                                strFailReason = _("The transaction amount is too small to pay the fee");
+                                strFailReason = "The transaction amount is too small to pay the fee";
                             else
-                                strFailReason = _("The transaction amount is too small to send after the fee has been deducted");
+                                strFailReason = "The transaction amount is too small to send after the fee has been deducted";
                         }
                         else
-                            strFailReason = _("Transaction amount too small");
+                            strFailReason = "Transaction amount too small";
                         return false;
                     }
                     
@@ -3878,21 +3881,21 @@ bool CWallet::AbandonCash(const vector<CRecipient>& vecSend, CWalletTx& wtxNew, 
                     if (!SelectCoins(nValueToSelect, setCoins, nValueIn, coinControl, nCoinType, fUseInstantSend))
                     {
                         if (nCoinType == ONLY_NOT10000IFMN) {
-                            strFailReason = _("Unable to locate enough funds for this transaction that are not equal 1000 DASH.");
+                            strFailReason = "Unable to locate enough funds for this transaction that are not equal 1000 DASH.";
                         } else if (nCoinType == ONLY_NONDENOMINATED_NOT10000IFMN) {
-                            strFailReason = _("Unable to locate enough PrivateSend non-denominated funds for this transaction that are not equal 1000 DASH.");
+                            strFailReason = "Unable to locate enough PrivateSend non-denominated funds for this transaction that are not equal 1000 DASH.";
                         } else if (nCoinType == ONLY_DENOMINATED) {
-                            strFailReason = _("Unable to locate enough PrivateSend denominated funds for this transaction.");
-                            strFailReason += " " + _("PrivateSend uses exact denominated amounts to send funds, you might simply need to anonymize some more coins.");
+                            strFailReason = "Unable to locate enough PrivateSend denominated funds for this transaction.";
+                            strFailReason += " PrivateSend uses exact denominated amounts to send funds, you might simply need to anonymize some more coins.";
                         } else if (nValueIn < nValueToSelect) {
-                            strFailReason = _("Insufficient funds.");
+                            strFailReason = "Insufficient funds.";
                         }
                         if (fUseInstantSend) {
                             if (nValueIn > sporkManager.GetSporkValue(SPORK_5_INSTANTSEND_MAX_VALUE)*COIN) {
-                                strFailReason += " " + strprintf(_("InstantSend doesn't support sending values that high yet. Transactions are currently limited to %1 DASH."), sporkManager.GetSporkValue(SPORK_5_INSTANTSEND_MAX_VALUE));
+                                strFailReason += " " + fmt::format("InstantSend doesn't support sending values that high yet. Transactions are currently limited to %1 DASH.", sporkManager.GetSporkValue(SPORK_5_INSTANTSEND_MAX_VALUE));
                             } else {
                                 // could be not true but most likely that's the reason
-                                strFailReason += " " + strprintf(_("InstantSend requires inputs with at least %d confirmations, you might need to wait a few minutes and try again."), INSTANTSEND_CONFIRMATIONS_REQUIRED);
+                                strFailReason += " " + fmt::format("InstantSend requires inputs with at least %d confirmations, you might need to wait a few minutes and try again.", INSTANTSEND_CONFIRMATIONS_REQUIRED);
                             }
                         }
                         return false;
@@ -3963,7 +3966,7 @@ bool CWallet::AbandonCash(const vector<CRecipient>& vecSend, CWalletTx& wtxNew, 
                                     txNew.vout[i].nValue -= nDust;
                                     if (txNew.vout[i].IsDust(::minRelayTxFee))
                                     {
-                                        strFailReason = _("The transaction amount is too small to send after the fee has been deducted");
+                                        strFailReason = "The transaction amount is too small to send after the fee has been deducted";
                                         return false;
                                     }
                                     break;
@@ -3986,7 +3989,7 @@ bool CWallet::AbandonCash(const vector<CRecipient>& vecSend, CWalletTx& wtxNew, 
                             }
                             else if ((unsigned int)nChangePosRet > txNew.vout.size())
                             {
-                                strFailReason = _("Change index out of range");
+                                strFailReason = "Change index out of range";
                                 return false;
                             }
                         
@@ -4034,7 +4037,7 @@ bool CWallet::AbandonCash(const vector<CRecipient>& vecSend, CWalletTx& wtxNew, 
 
                     if (!signSuccess)
                     {
-                        strFailReason = _("Signing transaction failed");
+                        strFailReason = "Signing transaction failed";
                         return false;
                     }
                     nIn++;
@@ -4052,7 +4055,7 @@ bool CWallet::AbandonCash(const vector<CRecipient>& vecSend, CWalletTx& wtxNew, 
     
                 if (nBytes >= MAX_STANDARD_TX_SIZE)
                 {
-                    strFailReason = _("Transaction too large");
+                    strFailReason = "Transaction too large";
                     return false;
                 }
     
@@ -4086,7 +4089,7 @@ bool CWallet::AbandonCash(const vector<CRecipient>& vecSend, CWalletTx& wtxNew, 
                 // äº¤æè´¹å¤ªå¤?
                 if (nFeeNeeded < ::minRelayTxFee.GetFee(nBytes))
                 {
-                    strFailReason = _("Transaction too large for fee policy");
+                    strFailReason = "Transaction too large for fee policy";
                     return false;
                 }
     
@@ -4110,7 +4113,7 @@ bool CWallet::CommitTransaction(CWalletTx& wtxNew, CReserveKey& reservekey, std:
 {
     {
         LOCK2(cs_main, cs_wallet);
-        LogPrintf("CommitTransaction:\n%s", wtxNew.ToString());
+        LOG_INFO("CommitTransaction:\n%s", wtxNew.ToString());
         {
             // This is only to keep the database open to defeat the auto-flush for the
             // duration of this scope.  This is the only place where this optimization
@@ -4149,7 +4152,7 @@ bool CWallet::CommitTransaction(CWalletTx& wtxNew, CReserveKey& reservekey, std:
             if (!wtxNew.AcceptToMemoryPool(false))
             {
                 // This must not fail. The transaction has already been signed and recorded.
-                LogPrintf("CommitTransaction(): Error: Transaction not valid\n");
+                LOG_INFO("CommitTransaction(): Error: Transaction not valid\n");
                 return false;
             }
             wtxNew.RelayWalletTransaction(strCommand);
@@ -4330,7 +4333,7 @@ bool CWallet::NewKeyPool()
             walletdb.WritePool(nIndex, CKeyPool(GenerateNewKey()));
             setKeyPool.insert(nIndex);
         }
-        LogPrintf("CWallet::NewKeyPool wrote %d new keys\n", nKeys);
+        LOG_INFO("CWallet::NewKeyPool wrote %d new keys\n", nKeys);
     }
     return true;
 }
@@ -4360,9 +4363,9 @@ bool CWallet::TopUpKeyPool(unsigned int kpSize)
             if (!walletdb.WritePool(nEnd, CKeyPool(GenerateNewKey())))
                 throw runtime_error("TopUpKeyPool(): writing generated key failed");
             setKeyPool.insert(nEnd);
-            LogPrintf("keypool added key %d, size=%u\n", nEnd, setKeyPool.size());
+            LOG_INFO("keypool added key %d, size=%u\n", nEnd, setKeyPool.size());
             double dProgress = 100.f * nEnd / (nTargetSize + 1);
-            std::string strMsg = strprintf(_("Loading wallet... (%3.2f %%)"), dProgress);
+            std::string strMsg = fmt::format("Loading wallet... (%3.2f %%)", dProgress);
             uiInterface.InitMessage(strMsg);
         }
     }
@@ -4392,7 +4395,7 @@ void CWallet::ReserveKeyFromKeyPool(int64_t& nIndex, CKeyPool& keypool)
         if (!HaveKey(keypool.vchPubKey.GetID()))
             throw runtime_error("ReserveKeyFromKeyPool(): unknown key in key pool");
         assert(keypool.vchPubKey.IsValid());
-        LogPrintf("keypool reserve %d\n", nIndex);
+        LOG_INFO("keypool reserve %d\n", nIndex);
     }
 }
 
@@ -4405,7 +4408,7 @@ void CWallet::KeepKey(int64_t nIndex)
         walletdb.ErasePool(nIndex);
         nKeysLeftSinceAutoBackup = nWalletBackups ? nKeysLeftSinceAutoBackup - 1 : 0;
     }
-    LogPrintf("keypool keep %d\n", nIndex);
+    LOG_INFO("keypool keep %d\n", nIndex);
 }
 
 void CWallet::ReturnKey(int64_t nIndex)
@@ -4415,7 +4418,7 @@ void CWallet::ReturnKey(int64_t nIndex)
         LOCK(cs_wallet);
         setKeyPool.insert(nIndex);
     }
-    LogPrintf("keypool return %d\n", nIndex);
+    LOG_INFO("keypool return %d\n", nIndex);
 }
 
 bool CWallet::GetKeyFromPool(CPubKey& result)
@@ -4879,7 +4882,7 @@ int CMerkleTx::SetMerkleBranch(const CBlock& block)
     if (nIndex == (int)block.vtx.size())
     {
         nIndex = -1;
-        LogPrintf("ERROR: SetMerkleBranch(): couldn't find tx in block\n");
+        LOG_INFO("ERROR: SetMerkleBranch(): couldn't find tx in block\n");
         return 0;
     }
 

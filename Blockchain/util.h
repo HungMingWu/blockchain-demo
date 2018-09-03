@@ -15,11 +15,6 @@
 #include "config/ulord-config.h"
 #endif
 
-#include "compat.h"
-#include "tinyformat.h"
-#include "utiltime.h"
-#include "amount.h"
-
 #include <exception>
 #include <map>
 #include <stdint.h>
@@ -27,8 +22,11 @@
 #include <vector>
 
 #include <boost/filesystem/path.hpp>
-#include <boost/signals2/signal.hpp>
 #include <boost/thread/exceptions.hpp>
+
+#include "compat.h"
+#include "utiltime.h"
+#include "amount.h"
 
  // Debugging macros
 
@@ -47,92 +45,22 @@ extern bool fMasterNode;
 extern bool fLiteMode;
 extern int nWalletBackups;
 
-static const bool DEFAULT_LOGTIMEMICROS = false;
 static const bool DEFAULT_LOGIPS = false;
-static const bool DEFAULT_LOGTIMESTAMPS = true;
 static const bool DEFAULT_LOGTHREADNAMES = false;
-
-/** Signals for translation. */
-class CTranslationInterface
-{
-public:
-	/** Translate a message to the native language of the user. */
-	boost::signals2::signal<std::string(const char* psz)> Translate;
-};
 
 extern std::map<std::string, std::string> mapArgs;
 extern std::map<std::string, std::vector<std::string> > mapMultiArgs;
 extern bool fDebug;
-extern bool fPrintToConsole;
-extern bool fPrintToDebugLog;
 extern bool fServer;
 extern std::string strMiscWarning;
-extern bool fLogTimestamps;
-extern bool fLogTimeMicros;
-extern bool fLogThreadNames;
 extern bool fLogIPs;
 extern volatile bool fReopenDebugLog;
-extern CTranslationInterface translationInterface;
 
 extern const char * const BITCOIN_CONF_FILENAME;
 extern const char * const BITCOIN_PID_FILENAME;
 
-/**
- * Translation function: Call Translate signal on UI interface, which returns a boost::optional result.
- * If no translation slot is registered, nothing is returned, and simply return the input.
- */
-inline std::string _(const char* psz)
-{
-	boost::optional<std::string> rv = translationInterface.Translate(psz);
-	return rv ? (*rv) : psz;
-}
-
 void SetupEnvironment();
 bool SetupNetworking();
-
-/** Return true if log accepts specified category */
-bool LogAcceptCategory(const char* category);
-/** Send a string to the log output */
-int LogPrintStr(const std::string &str);
-
-#define LogPrintf(...) LogPrint(NULL, __VA_ARGS__)
-
-/**
- * When we switch to C++11, this can be switched to variadic templates instead
- * of this macro-based construction (see tinyformat.h).
- */
-#define MAKE_ERROR_AND_LOG_FUNC(n)                                        \
-    /**   Print to debug.log if -debug=category switch is given OR category is NULL. */ \
-    template<TINYFORMAT_ARGTYPES(n)>                                          \
-    static inline int LogPrint(const char* category, const char* format, TINYFORMAT_VARARGS(n))  \
-    {                                                                         \
-        if(!LogAcceptCategory(category)) return 0;                            \
-        return LogPrintStr(tfm::format(format, TINYFORMAT_PASSARGS(n))); \
-    }                                                                         \
-    /**   Log error and return false */                                        \
-    template<TINYFORMAT_ARGTYPES(n)>                                          \
-    static inline bool error(const char* format, TINYFORMAT_VARARGS(n))                     \
-    {                                                                         \
-        LogPrintStr("ERROR: " + tfm::format(format, TINYFORMAT_PASSARGS(n)) + "\n"); \
-        return false;                                                         \
-    }
-
-TINYFORMAT_FOREACH_ARGNUM(MAKE_ERROR_AND_LOG_FUNC)
-
-/**
- * Zero-arg versions of logging and error, these are not covered by
- * TINYFORMAT_FOREACH_ARGNUM
- */
-	static inline int LogPrint(const char* category, const char* format)
-{
-	if (!LogAcceptCategory(category)) return 0;
-	return LogPrintStr(format);
-}
-static inline bool error(const char* format)
-{
-	LogPrintStr(std::string("ERROR: ") + format + "\n");
-	return false;
-}
 
 void PrintExceptionContinue(const std::exception *pex, const char* pszThread);
 void ParseParameters(int argc, const char*const argv[]);
@@ -157,7 +85,6 @@ void ReadConfigFile(std::map<std::string, std::string>& mapSettingsRet, std::map
 boost::filesystem::path GetSpecialFolderPath(int nFolder, bool fCreate = true);
 #endif
 boost::filesystem::path GetTempPath();
-void OpenDebugLog();
 void ShrinkDebugFile();
 void runCommand(const std::string& strCommand);
 
@@ -248,17 +175,14 @@ std::string GetThreadName();
  */
 template <typename Callable> void TraceThread(const char* name, Callable func)
 {
-	std::string s = strprintf("ulord-%s", name);
+	std::string s = fmt::format("ulord-%s", name);
 	RenameThread(s.c_str());
 	try
 	{
-		LogPrintf("%s thread start\n", name);
 		func();
-		LogPrintf("%s thread exit\n", name);
 	}
 	catch (const boost::thread_interrupted&)
 	{
-		LogPrintf("%s thread interrupt\n", name);
 		throw;
 	}
 	catch (const std::exception& e) {

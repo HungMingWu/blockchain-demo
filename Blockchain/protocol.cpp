@@ -7,6 +7,7 @@
 
 #include "util.h"
 #include "utilstrencodings.h"
+#include "Log.h"
 
 #ifndef WIN32
 # include <arpa/inet.h>
@@ -195,7 +196,7 @@ bool CMessageHeader::IsValid(const MessageStartChars& pchMessageStartIn) const
     // Message size
     if (nMessageSize > MAX_SIZE)
     {
-        LogPrintf("CMessageHeader::IsValid(): (%s, %u bytes) nMessageSize > MAX_SIZE\n", GetCommand(), nMessageSize);
+        LOG_INFO("CMessageHeader::IsValid(): (%s, %u bytes) nMessageSize > MAX_SIZE\n", GetCommand(), nMessageSize);
         return false;
     }
 
@@ -245,7 +246,7 @@ CInv::CInv(const std::string& strType, const uint256& hashIn)
         }
     }
     if (i == ARRAYLEN(ppszTypeName))
-        throw std::out_of_range(strprintf("CInv::CInv(string, uint256): unknown type '%s'", strType));
+        throw std::out_of_range(fmt::format("CInv::CInv(string, uint256): unknown type '%s'", strType));
     hash = hashIn;
 }
 
@@ -262,13 +263,13 @@ bool CInv::IsKnownType() const
 const char* CInv::GetCommand() const
 {
     if (!IsKnownType())
-        throw std::out_of_range(strprintf("CInv::GetCommand(): type=%d unknown type", type));
+        throw std::out_of_range(fmt::format("CInv::GetCommand(): type=%d unknown type", type));
     return ppszTypeName[type];
 }
 
 std::string CInv::ToString() const
 {
-    return strprintf("%s %s", GetCommand(), hash.ToString());
+    return fmt::format("%s %s", GetCommand(), hash.ToString());
 }
 
 const std::vector<std::string> &getAllNetMessageTypes()

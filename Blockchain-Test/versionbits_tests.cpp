@@ -81,8 +81,8 @@ public:
 
 	VersionBitsTester& TestDefined() {
 		for (int i = 0; i < CHECKERS; i++) {
-			if ((insecure_rand() & ((1 << i) - 1)) == 0) {
-				SECTION(strprintf("Test %i for DEFINED", num)) {
+			SECTION("Tests for DEFINED") {
+				if ((insecure_rand() & ((1 << i) - 1)) == 0) {
 					REQUIRE(checker[i].GetStateFor(vpblock.empty() ? NULL : vpblock.back()) == THRESHOLD_DEFINED);
 				}
 			}
@@ -94,7 +94,7 @@ public:
 	VersionBitsTester& TestStarted() {
 		for (int i = 0; i < CHECKERS; i++) {
 			if ((insecure_rand() & ((1 << i) - 1)) == 0) {
-				SECTION(strprintf("Test %i for STARTED", num)) {
+				SECTION(fmt::format("Test %i for STARTED", num)) {
 					REQUIRE(checker[i].GetStateFor(vpblock.empty() ? NULL : vpblock.back()) == THRESHOLD_STARTED);
 				}
 			}
@@ -106,7 +106,7 @@ public:
 	VersionBitsTester& TestLockedIn() {
 		for (int i = 0; i < CHECKERS; i++) {
 			if ((insecure_rand() & ((1 << i) - 1)) == 0) {
-				SECTION(strprintf("Test %i for LOCKED_IN", num)) {
+				SECTION(fmt::format("Test %i for LOCKED_IN", num)) {
 					REQUIRE(checker[i].GetStateFor(vpblock.empty() ? NULL : vpblock.back()) == THRESHOLD_LOCKED_IN);
 				}
 			}
@@ -118,7 +118,7 @@ public:
 	VersionBitsTester& TestActive() {
 		for (int i = 0; i < CHECKERS; i++) {
 			if ((insecure_rand() & ((1 << i) - 1)) == 0) {
-				SECTION(strprintf("Test %i for ACTIVE", num)) {
+				SECTION(fmt::format("Test %i for ACTIVE", num)) {
 					REQUIRE(checker[i].GetStateFor(vpblock.empty() ? NULL : vpblock.back()) == THRESHOLD_ACTIVE);
 				}
 			}
@@ -130,7 +130,7 @@ public:
 	VersionBitsTester& TestFailed() {
 		for (int i = 0; i < CHECKERS; i++) {
 			if ((insecure_rand() & ((1 << i) - 1)) == 0) {
-				SECTION(strprintf("Test %i for FAILED", num)) {
+				SECTION(fmt::format("Test %i for FAILED", num)) {
 					REQUIRE(checker[i].GetStateFor(vpblock.empty() ? NULL : vpblock.back()) == THRESHOLD_FAILED);
 				}
 			}

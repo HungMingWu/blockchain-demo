@@ -9,6 +9,7 @@
 #include "protocol.h"
 #include "random.h"
 #include "rpcprotocol.h"
+#include "Log.h"
 
 // Necessary to prevent compile errors due to forward declaration of
 //CScript in serialize.h (included from crypter.h)
@@ -348,8 +349,8 @@ void CKeePassIntegrator::doHTTPPost(const std::string& sRequest, int& nStatus, s
     evhttp_add_header(output_headers, "Connection", "close");
 
     // Logging of actual post data disabled as to not write passphrase in debug.log. Only enable temporarily when needed
-    //LogPrint("keepass", "CKeePassIntegrator::doHTTPPost -- send POST data: %s\n", strPost);
-    LogPrint("keepass", "CKeePassIntegrator::doHTTPPost -- send POST data\n");
+    //LOG_INFO("CKeePassIntegrator::doHTTPPost -- send POST data: %s\n", strPost);
+    LOG_INFO("CKeePassIntegrator::doHTTPPost -- send POST data\n");
 
 //    boost::asio::streambuf request;
 //    std::ostream request_stream(&request);
@@ -358,7 +359,7 @@ void CKeePassIntegrator::doHTTPPost(const std::string& sRequest, int& nStatus, s
 //    // Send the request.
 //    boost::asio::write(socket, request);
 
-//    LogPrint("keepass", "CKeePassIntegrator::doHTTPPost -- request written\n");
+//    LOG_INFO("CKeePassIntegrator::doHTTPPost -- request written\n");
 
 //    // Read the response status line. The response streambuf will automatically
 //    // grow to accommodate the entire line. The growth may be limited by passing
@@ -366,7 +367,7 @@ void CKeePassIntegrator::doHTTPPost(const std::string& sRequest, int& nStatus, s
 //    boost::asio::streambuf response;
 //    boost::asio::read_until(socket, response, "\r\n");
 
-//    LogPrint("keepass", "CKeePassIntegrator::doHTTPPost -- request status line read\n");
+//    LOG_INFO("CKeePassIntegrator::doHTTPPost -- request status line read\n");
 
 //    // Receive HTTP reply status
 //    int nProto = 0;
@@ -390,7 +391,7 @@ void CKeePassIntegrator::doHTTPPost(const std::string& sRequest, int& nStatus, s
     evhttp_connection_free(evcon);
     event_base_free(base);
 
-//    LogPrint("keepass", "CKeePassIntegrator::doHTTPPost -- reading response body start\n");
+//    LOG_INFO("CKeePassIntegrator::doHTTPPost -- reading response body start\n");
 //    // Read until EOF, writing data to output as we go.
 //    while (boost::asio::read(socket, response, boost::asio::transfer_at_least(1), error))
 //    {
@@ -402,18 +403,18 @@ void CKeePassIntegrator::doHTTPPost(const std::string& sRequest, int& nStatus, s
 //            }
 //        }
 //    }
-//    LogPrint("keepass", "CKeePassIntegrator::doHTTPPost -- reading response body end\n");
+//    LOG_INFO("CKeePassIntegrator::doHTTPPost -- reading response body end\n");
 //
 //    // Receive HTTP reply message headers and body
 //    std::map<std::string, std::string> mapHeaders;
 //    ReadHTTPMessage(response_stream, mapHeaders, strResponse, nProto, std::numeric_limits<size_t>::max());
-//    LogPrint("keepass", "CKeePassIntegrator::doHTTPPost -- Processed body\n");
+//    LOG_INFO("CKeePassIntegrator::doHTTPPost -- Processed body\n");
 
     nStatus = response.nStatus;
     if (response.nStatus == 0)
         throw std::runtime_error("couldn't connect to server");
     else if (response.nStatus >= 400 && response.nStatus != HTTP_BAD_REQUEST && response.nStatus != HTTP_NOT_FOUND && response.nStatus != HTTP_INTERNAL_SERVER_ERROR)
-        throw std::runtime_error(strprintf("server returned HTTP error %d", response.nStatus));
+        throw std::runtime_error(fmt::format("server returned HTTP error %d", response.nStatus));
     else if (response.strBody.empty())
         throw std::runtime_error("no response from server");
 
@@ -440,7 +441,7 @@ void CKeePassIntegrator::rpcTestAssociation(bool bTriggerUnlock)
 
     doHTTPPost(request.getJson(), nStatus, strResponse);
 
-    LogPrint("keepass", "CKeePassIntegrator::rpcTestAssociation -- send result: status: %d response: %s\n", nStatus, strResponse);
+    LOG_INFO("CKeePassIntegrator::rpcTestAssociation -- send result: status: %d response: %s\n", nStatus, strResponse);
 }
 
 std::vector<CKeePassIntegrator::CKeePassEntry> CKeePassIntegrator::rpcGetLogins()
@@ -461,8 +462,8 @@ std::vector<CKeePassIntegrator::CKeePassEntry> CKeePassIntegrator::rpcGetLogins(
     doHTTPPost(request.getJson(), nStatus, strResponse);
 
     // Logging of actual response data disabled as to not write passphrase in debug.log. Only enable temporarily when needed
-    //LogPrint("keepass", "CKeePassIntegrator::rpcGetLogins -- send result: status: %d response: %s\n", nStatus, strResponse);
-    LogPrint("keepass", "CKeePassIntegrator::rpcGetLogins -- send result: status: %d\n", nStatus);
+    //LOG_INFO("CKeePassIntegrator::rpcGetLogins -- send result: status: %d response: %s\n", nStatus, strResponse);
+    LOG_INFO("CKeePassIntegrator::rpcGetLogins -- send result: status: %d\n", nStatus);
 
     if(nStatus != 200)
     {
@@ -497,7 +498,7 @@ void CKeePassIntegrator::rpcSetLogin(const SecureString& sWalletPass, const Secu
     request.addStrParameter("Id", strKeePassId);
     request.addStrParameter("Url", sUrl);
 
-    LogPrint("keepass", "CKeePassIntegrator::rpcSetLogin -- send Url: %s\n", sUrl);
+    LOG_INFO("CKeePassIntegrator::rpcSetLogin -- send Url: %s\n", sUrl.c_str());
 
     //request.addStrParameter("SubmitUrl", sSubmitUrl); // Is used to construct the entry title
     request.addStrParameter("Login", SecureString("ulord"));
@@ -513,7 +514,7 @@ void CKeePassIntegrator::rpcSetLogin(const SecureString& sWalletPass, const Secu
     doHTTPPost(request.getJson(), nStatus, strResponse);
 
 
-    LogPrint("keepass", "CKeePassIntegrator::rpcSetLogin -- send result: status: %d response: %s\n", nStatus, strResponse);
+    LOG_INFO("CKeePassIntegrator::rpcSetLogin -- send result: status: %d response: %s\n", nStatus, strResponse);
 
     if(nStatus != 200)
     {
@@ -556,7 +557,7 @@ void CKeePassIntegrator::rpcAssociate(std::string& strId, SecureString& sKeyBase
 
     doHTTPPost(request.getJson(), nStatus, strResponse);
 
-    LogPrint("keepass", "CKeePassIntegrator::rpcAssociate -- send result: status: %d response: %s\n", nStatus, strResponse);
+    LOG_INFO("CKeePassIntegrator::rpcAssociate -- send result: status: %d response: %s\n", nStatus, strResponse);
 
     if(nStatus != 200)
     {

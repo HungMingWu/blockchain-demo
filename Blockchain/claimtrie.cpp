@@ -3,6 +3,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <iostream>
+#include <sstream>
 #include <algorithm>
 
 #include "claimtrie.h"
@@ -1168,12 +1169,14 @@ bool CClaimTrie::ReadFromDisk(bool check)
                 {
                     if (!InsertFromDisk(key.second, node))
                     {
-                        return error("%s(): error restoring claim trie from disk", __func__);
+                        LOG_ERROR("%s(): error restoring claim trie from disk", __func__);
+						return false;
                     }
                 }
                 else
                 {
-                    return error("%s(): error reading claim trie from disk", __func__);
+                    LOG_ERROR("%s(): error reading claim trie from disk", __func__);
+					return false;
                 }
             }
         }

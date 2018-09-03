@@ -3,14 +3,14 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "utilstrencodings.h"
-
-#include "tinyformat.h"
-
 #include <cstdlib>
 #include <cstring>
 #include <errno.h>
 #include <limits>
+#include <sstream>
+#include <spdlog/fmt/fmt.h>
+
+#include "utilstrencodings.h"
 
 using namespace std;
 
@@ -512,12 +512,12 @@ std::string FormatParagraph(const std::string& in, size_t width, size_t indent)
 
 std::string i64tostr(int64_t n)
 {
-    return strprintf("%d", n);
+    return fmt::format("%d", n);
 }
 
 std::string itostr(int n)
 {
-    return strprintf("%d", n);
+    return fmt::format("%d", n);
 }
 
 int64_t atoi64(const char* psz)

@@ -2,6 +2,8 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#include <spdlog/fmt/fmt.h>
+
 #include "core_io.h"
 #include "privsend.h"
 #include "governance.h"
@@ -109,7 +111,7 @@ bool CGovernanceObject::ProcessVote(CNode* pfrom,
             LOG_INFO(ostr.str().c_str());
         }
         else {
-            LogPrint("gobject", ostr.str().c_str());
+            LOG_INFO(ostr.str().c_str());
         }
         return false;
     }
@@ -123,7 +125,7 @@ bool CGovernanceObject::ProcessVote(CNode* pfrom,
     if(eSignal == VOTE_SIGNAL_NONE) {
         std::ostringstream ostr;
         ostr << "CGovernanceObject::ProcessVote -- Vote signal: none" << "\n";
-        LogPrint("gobject", ostr.str().c_str());
+        LOG_INFO(ostr.str().c_str());
         exception = CGovernanceException(ostr.str(), GOVERNANCE_EXCEPTION_WARNING);
         return false;
     }
@@ -149,7 +151,7 @@ bool CGovernanceObject::ProcessVote(CNode* pfrom,
                  << ", MN outpoint = " << vote.GetVinMasternode().prevout.ToStringShort()
                  << ", governance object hash = " << GetHash().ToString()
                  << ", time delta = " << nTimeDelta << "\n";
-            LogPrint("gobject", ostr.str().c_str());
+            LOG_INFO(ostr.str().c_str());
             exception = CGovernanceException(ostr.str(), GOVERNANCE_EXCEPTION_TEMPORARY_ERROR);
             nVoteTimeUpdate = nNow;
             return false;
@@ -249,7 +251,7 @@ bool CGovernanceObject::Sign(CKey& keyMasternode, CPubKey& pubKeyMasternode)
         return false;
     }
 
-    LogPrint("gobject", "CGovernanceObject::Sign -- pubkey id = %s, vin = %s\n",
+    LOG_INFO("CGovernanceObject::Sign -- pubkey id = %s, vin = %s\n",
              pubKeyMasternode.GetID().ToString(), vinMasternode.prevout.ToStringShort());
 
 
@@ -439,7 +441,7 @@ bool CGovernanceObject::IsValidLocally(std::string& strError, bool& fMissingMast
         case GOVERNANCE_OBJECT_WATCHDOG:
             break;
         default:
-            strError = strprintf("Invalid object type %d", nObjectType);
+            strError = fmt::format("Invalid object type %d", nObjectType);
             return false;
     }
 
@@ -513,13 +515,13 @@ bool CGovernanceObject::IsCollateralValid(std::string& strError)
     // RETRIEVE TRANSACTION IN QUESTION
 
     if (!txCollateral) {
-        strError = strprintf("Can't find collateral tx %s", txCollateral->ToString());
+        strError = fmt::format("Can't find collateral tx %s", txCollateral->ToString());
         LOG_INFO("CGovernanceObject::IsCollateralValid -- %s\n", strError);
         return false;
     }
 
     if (txCollateral->vout.size() < 1) {
-        strError = strprintf("tx vout size less than 1 | %d", txCollateral->vout.size());
+        strError = fmt::format("tx vout size less than 1 | %d", txCollateral->vout.size());
         LOG_INFO("CGovernanceObject::IsCollateralValid -- %s\n", strError);
         return false;
     }
@@ -543,7 +545,7 @@ bool CGovernanceObject::IsCollateralValid(std::string& strError)
              << ", o.scriptPubKey = " << ScriptToAsmStr( o.scriptPubKey, false )
              << endl; );
         if(!o.scriptPubKey.IsNormalPaymentScript() && !o.scriptPubKey.IsUnspendable()){
-            strError = strprintf("Invalid Script %s", txCollateral->ToString());
+            strError = fmt::format("Invalid Script %s", txCollateral->ToString());
             LOG_INFO ("CGovernanceObject::IsCollateralValid -- %s\n", strError);
             return false;
         }
@@ -558,7 +560,7 @@ bool CGovernanceObject::IsCollateralValid(std::string& strError)
     }
 
     if(!foundOpReturn){
-        strError = strprintf("Couldn't find opReturn %s in %s", nExpectedHash.ToString(), txCollateral->ToString());
+        strError = fmt::format("Couldn't find opReturn %s in %s", nExpectedHash.ToString(), txCollateral->ToString());
         LOG_INFO ("CGovernanceObject::IsCollateralValid -- %s\n", strError);
         return false;
     }
@@ -580,7 +582,7 @@ bool CGovernanceObject::IsCollateralValid(std::string& strError)
     if(nConfirmationsIn >= GOVERNANCE_FEE_CONFIRMATIONS) {
         strError = "valid";
     } else {
-        strError = strprintf("Collateral requires at least %d confirmations - %d confirmations", GOVERNANCE_FEE_CONFIRMATIONS, nConfirmationsIn);
+        strError = fmt::format("Collateral requires at least %d confirmations - %d confirmations", GOVERNANCE_FEE_CONFIRMATIONS, nConfirmationsIn);
         LOG_INFO ("CGovernanceObject::IsCollateralValid -- %s - %d confirmations\n", strError, nConfirmationsIn);
         return false;
     }

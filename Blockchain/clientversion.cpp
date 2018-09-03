@@ -2,11 +2,11 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "clientversion.h"
-
-#include "tinyformat.h"
-
 #include <string>
+#include <sstream>
+#include <spdlog/fmt/fmt.h>
+
+#include "clientversion.h"
 
 /**
  * Name of client reported in the 'version' message. Report the same name
@@ -81,9 +81,9 @@ const std::string CLIENT_DATE(BUILD_DATE);
 static std::string FormatVersion(int nVersion)
 {
     if (nVersion % 100 == 0)
-        return strprintf("%d.%d.%d", nVersion / 1000000, (nVersion / 10000) % 100, (nVersion / 100) % 100);
+        return fmt::format("%d.%d.%d", nVersion / 1000000, (nVersion / 10000) % 100, (nVersion / 100) % 100);
     else
-        return strprintf("%d.%d.%d.%d", nVersion / 1000000, (nVersion / 10000) % 100, (nVersion / 100) % 100, nVersion % 100);
+        return fmt::format("%d.%d.%d.%d", nVersion / 1000000, (nVersion / 10000) % 100, (nVersion / 100) % 100, nVersion % 100);
 }
 
 std::string FormatFullVersion()

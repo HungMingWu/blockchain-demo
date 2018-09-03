@@ -186,7 +186,7 @@ public:
 
     std::string ToString()
     {
-        return strprintf("nDenom=%d, nTime=%lld, fReady=%s, fTried=%s, masternode=%s",
+        return fmt::format("nDenom=%d, nTime=%lld, fReady=%s, fTried=%s, masternode=%s",
                         nDenom, nTime, fReady ? "true" : "false", fTried ? "true" : "false", vin.prevout.ToStringShort());
     }
 

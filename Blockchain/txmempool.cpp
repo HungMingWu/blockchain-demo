@@ -3,6 +3,8 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#include <spdlog/fmt/fmt.h>
+
 #include "txmempool.h"
 
 #include "clientversion.h"
@@ -16,6 +18,8 @@
 #include "utilmoneystr.h"
 #include "utiltime.h"
 #include "version.h"
+#include "Log.h"
+
 #include "script/standard.h"
 #include <boost/range/adaptor/reversed.hpp>
 
@@ -195,7 +199,7 @@ bool CTxMemPool::CalculateMemPoolAncestors(const CTxMemPoolEntry &entry, setEntr
             if (piter != mapTx.end()) {
                 parentHashes.insert(piter);
                 if (parentHashes.size() + 1 > limitAncestorCount) {
-                    errString = strprintf("too many unconfirmed parents [limit: %u]", limitAncestorCount);
+                    errString = fmt::format("too many unconfirmed parents [limit: %u]", limitAncestorCount);
                     return false;
                 }
             }
@@ -217,13 +221,13 @@ bool CTxMemPool::CalculateMemPoolAncestors(const CTxMemPoolEntry &entry, setEntr
         totalSizeWithAncestors += stageit->GetTxSize();
 
         if (stageit->GetSizeWithDescendants() + entry.GetTxSize() > limitDescendantSize) {
-            errString = strprintf("exceeds descendant size limit for tx %s [limit: %u]", stageit->GetTx().GetHash().ToString(), limitDescendantSize);
+            errString = fmt::format("exceeds descendant size limit for tx %s [limit: %u]", stageit->GetTx().GetHash().ToString(), limitDescendantSize);
             return false;
         } else if (stageit->GetCountWithDescendants() + 1 > limitDescendantCount) {
-            errString = strprintf("too many descendants for tx %s [limit: %u]", stageit->GetTx().GetHash().ToString(), limitDescendantCount);
+            errString = fmt::format("too many descendants for tx %s [limit: %u]", stageit->GetTx().GetHash().ToString(), limitDescendantCount);
             return false;
         } else if (totalSizeWithAncestors > limitAncestorSize) {
-            errString = strprintf("exceeds ancestor size limit [limit: %u]", limitAncestorSize);
+            errString = fmt::format("exceeds ancestor size limit [limit: %u]", limitAncestorSize);
             return false;
         }
 
@@ -234,7 +238,7 @@ bool CTxMemPool::CalculateMemPoolAncestors(const CTxMemPoolEntry &entry, setEntr
                 parentHashes.insert(phash);
             }
             if (parentHashes.size() + setAncestors.size() + 1 > limitAncestorCount) {
-                errString = strprintf("too many unconfirmed ancestors [limit: %u]", limitAncestorCount);
+                errString = fmt::format("too many unconfirmed ancestors [limit: %u]", limitAncestorCount);
                 return false;
             }
         }
@@ -504,7 +508,7 @@ void CTxMemPool::addSpentIndex(const CTxMemPoolEntry &entry, const CCoinsViewCac
 
 		if(!DecodeAddressHash(prevout.scriptPubKey, addressHash, addressType))
         {
-			//LogPrintf("%s@%d: scriptPubKey at vin[%d] error\n", __func__, __LINE__, j);
+			//LOG_INFO("%s@%d: scriptPubKey at vin[%d] error\n", __func__, __LINE__, j);
         }
 
         CSpentIndexKey key = CSpentIndexKey(input.prevout.hash, input.prevout.n);
@@ -746,7 +750,7 @@ void CTxMemPool::check(const CCoinsViewCache *pcoins) const
     if (insecure_rand() >= nCheckFrequency)
         return;
 
-    LogPrint("mempool", "Checking mempool with %u transactions and %u inputs\n", (unsigned int)mapTx.size(), (unsigned int)mapNextTx.size());
+    LOG_INFO("Checking mempool with %u transactions and %u inputs\n", (unsigned int)mapTx.size(), (unsigned int)mapNextTx.size());
 
     uint64_t checkTotal = 0;
     uint64_t innerUsage = 0;
@@ -895,7 +899,7 @@ CTxMemPool::WriteFeeEstimates(CAutoFile& fileout) const
         minerPolicyEstimator->Write(fileout);
     }
     catch (const std::exception&) {
-        LogPrintf("CTxMemPool::WriteFeeEstimates(): unable to write policy estimator data (non-fatal)\n");
+        LOG_INFO("CTxMemPool::WriteFeeEstimates(): unable to write policy estimator data (non-fatal)\n");
         return false;
     }
     return true;
@@ -907,14 +911,16 @@ CTxMemPool::ReadFeeEstimates(CAutoFile& filein)
     try {
         int nVersionRequired, nVersionThatWrote;
         filein >> nVersionRequired >> nVersionThatWrote;
-        if (nVersionRequired > CLIENT_VERSION)
-            return error("CTxMemPool::ReadFeeEstimates(): up-version (%d) fee estimate file", nVersionRequired);
+		if (nVersionRequired > CLIENT_VERSION) {
+			LOG_ERROR("CTxMemPool::ReadFeeEstimates(): up-version (%d) fee estimate file", nVersionRequired);
+			return false;
+		}
 
         LOCK(cs);
         minerPolicyEstimator->Read(filein);
     }
     catch (const std::exception&) {
-        LogPrintf("CTxMemPool::ReadFeeEstimates(): unable to read policy estimator data (non-fatal)\n");
+        LOG_INFO("CTxMemPool::ReadFeeEstimates(): unable to read policy estimator data (non-fatal)\n");
         return false;
     }
     return true;
@@ -940,7 +946,7 @@ void CTxMemPool::PrioritiseTransaction(const uint256 hash, const string strHash,
             }
         }
     }
-    LogPrintf("PrioritiseTransaction: %s priority += %f, fee += %d\n", strHash, dPriorityDelta, FormatMoney(nFeeDelta));
+    LOG_INFO("PrioritiseTransaction: %s priority += %f, fee += %d\n", strHash, dPriorityDelta, FormatMoney(nFeeDelta));
 }
 
 void CTxMemPool::ApplyDeltas(const uint256 hash, double &dPriorityDelta, CAmount &nFeeDelta) const
@@ -1137,5 +1143,5 @@ void CTxMemPool::TrimToSize(size_t sizelimit, std::vector<uint256>* pvNoSpendsRe
     }
 
     if (maxFeeRateRemoved > CFeeRate(0))
-        LogPrint("mempool", "Removed %u txn, rolling minimum fee bumped to %s\n", nTxnRemoved, maxFeeRateRemoved.ToString());
+        LOG_INFO("Removed %u txn, rolling minimum fee bumped to %s\n", nTxnRemoved, maxFeeRateRemoved.ToString());
 }

@@ -315,10 +315,10 @@ public:
         READWRITE(vchSig);
         if(nType & SER_DISK) {
             // Only include these for the disk file format
-            LogPrint("gobject", "CGovernanceObject::SerializationOp Reading/writing votes from/to disk\n");
+            LOG_INFO("CGovernanceObject::SerializationOp Reading/writing votes from/to disk\n");
             READWRITE(mapCurrentMNVotes);
             READWRITE(fileVotes);
-            LogPrint("gobject", "CGovernanceObject::SerializationOp hash = %s, vote count = %d\n", GetHash().ToString(), fileVotes.GetVoteCount());
+            LOG_INFO("CGovernanceObject::SerializationOp hash = %s, vote count = %d\n", GetHash().ToString(), fileVotes.GetVoteCount());
         }
 
         // AFTER DESERIALIZATION OCCURS, CACHED VARIABLES MUST BE CALCULATED MANUALLY

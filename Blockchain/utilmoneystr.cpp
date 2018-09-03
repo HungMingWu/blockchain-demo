@@ -3,10 +3,11 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#include <spdlog/fmt/fmt.h>
+
 #include "utilmoneystr.h"
 
 #include "primitives/transaction.h"
-#include "tinyformat.h"
 #include "utilstrencodings.h"
 
 using namespace std;
@@ -18,7 +19,7 @@ std::string FormatMoney(const CAmount& n)
     int64_t n_abs = (n > 0 ? n : -n);
     int64_t quotient = n_abs/COIN;
     int64_t remainder = n_abs%COIN;
-    string str = strprintf("%d.%08d", quotient, remainder);
+    string str = fmt::format("%d.%08d", quotient, remainder);
 
     // Right-trim excess zeros before the decimal point:
     int nTrim = 0;

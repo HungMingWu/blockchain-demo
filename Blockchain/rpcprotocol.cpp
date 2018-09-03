@@ -4,17 +4,19 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#include <stdint.h>
+#include <fstream>
+
 #include "rpcprotocol.h"
 
 #include "random.h"
-#include "tinyformat.h"
 #include "util.h"
 #include "utilstrencodings.h"
 #include "utiltime.h"
 #include "version.h"
+#include "Log.h"
 
-#include <stdint.h>
-#include <fstream>
+
 
 using namespace std;
 
@@ -93,12 +95,12 @@ bool GenerateAuthCookie(std::string *cookie_out)
     boost::filesystem::path filepath = GetAuthCookieFile();
     file.open(filepath.string().c_str());
     if (!file.is_open()) {
-        LogPrintf("Unable to open cookie authentication file %s for writing\n", filepath.string());
+        LOG_INFO("Unable to open cookie authentication file %s for writing\n", filepath.string());
         return false;
     }
     file << cookie;
     file.close();
-    LogPrintf("Generated RPC authentication cookie %s\n", filepath.string());
+    LOG_INFO("Generated RPC authentication cookie %s\n", filepath.string());
 
     if (cookie_out)
         *cookie_out = cookie;
@@ -126,7 +128,7 @@ void DeleteAuthCookie()
     try {
         boost::filesystem::remove(GetAuthCookieFile());
     } catch (const boost::filesystem::filesystem_error& e) {
-        LogPrintf("%s: Unable to remove random auth cookie file: %s\n", __func__, e.what());
+        LOG_INFO("%s: Unable to remove random auth cookie file: %s\n", __func__, e.what());
     }
 }
 

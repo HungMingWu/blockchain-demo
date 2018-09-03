@@ -19,6 +19,7 @@
 #include "sync.h"
 #include "utilstrencodings.h"
 #include "utiltime.h"
+#include "Log.h"
 
 #include <stdarg.h>
 
@@ -121,17 +122,11 @@ const char * const BITCOIN_PID_FILENAME = "ulordd.pid";
 map<string, string> mapArgs;
 map<string, vector<string> > mapMultiArgs;
 bool fDebug = false;
-bool fPrintToConsole = false;
-bool fPrintToDebugLog = true;
 bool fDaemon = false;
 bool fServer = false;
 string strMiscWarning;
-bool fLogTimestamps = DEFAULT_LOGTIMESTAMPS;
-bool fLogTimeMicros = DEFAULT_LOGTIMEMICROS;
-bool fLogThreadNames = DEFAULT_LOGTHREADNAMES;
 bool fLogIPs = DEFAULT_LOGIPS;
 volatile bool fReopenDebugLog = false;
-CTranslationInterface translationInterface;
 
 /** Init OpenSSL library multithreading support */
 static CCriticalSection** ppmutexOpenSSL;
@@ -185,205 +180,9 @@ public:
 }
 instance_of_cinit;
 
-/**
- * LogPrintf() has been broken a couple of times now
- * by well-meaning people adding mutexes in the most straightforward way.
- * It breaks because it may be called by global destructors during shutdown.
- * Since the order of destruction of static/global objects is undefined,
- * defining a mutex as a global object doesn't work (the mutex gets
- * destroyed, and then some later destructor calls OutputDebugStringF,
- * maybe indirectly, and you get a core dump at shutdown trying to lock
- * the mutex).
- */
-
-static std::once_flag debugPrintInitFlag;
-
-/**
- * We use std::call_once() to make sure mutexDebugLog and
- * vMsgsBeforeOpenLog are initialized in a thread-safe manner.
- *
- * NOTE: fileout, mutexDebugLog and sometimes vMsgsBeforeOpenLog
- * are leaked on exit. This is ugly, but will be cleaned up by
- * the OS/libc. When the shutdown sequence is fully audited and
- * tested, explicit destruction of these objects can be implemented.
- */
-static FILE* fileout = NULL;
-static boost::mutex* mutexDebugLog = NULL;
-static list<string> *vMsgsBeforeOpenLog;
-
 static int FileWriteStr(const std::string &str, FILE *fp)
 {
 	return fwrite(str.data(), 1, str.size(), fp);
-}
-
-static void DebugPrintInit()
-{
-	assert(mutexDebugLog == NULL);
-	mutexDebugLog = new boost::mutex();
-	vMsgsBeforeOpenLog = new list<string>;
-}
-
-void OpenDebugLog()
-{
-	std::call_once(debugPrintInitFlag, &DebugPrintInit);
-	boost::mutex::scoped_lock scoped_lock(*mutexDebugLog);
-
-	assert(fileout == NULL);
-	assert(vMsgsBeforeOpenLog);
-	boost::filesystem::path pathDebug = GetDataDir() / "debug.log";
-	fileout = fopen(pathDebug.string().c_str(), "a");
-	if (fileout) setbuf(fileout, NULL); // unbuffered
-
-	// dump buffered messages from before we opened the log
-	while (!vMsgsBeforeOpenLog->empty()) {
-		FileWriteStr(vMsgsBeforeOpenLog->front(), fileout);
-		vMsgsBeforeOpenLog->pop_front();
-	}
-
-	delete vMsgsBeforeOpenLog;
-	vMsgsBeforeOpenLog = NULL;
-}
-
-bool LogAcceptCategory(const char* category)
-{
-	if (category != NULL)
-	{
-		// Give each thread quick access to -debug settings.
-		// This helps prevent issues debugging global destructors,
-		// where mapMultiArgs might be deleted before another
-		// global destructor calls LogPrint()
-		static boost::thread_specific_ptr<set<string> > ptrCategory;
-
-		if (!fDebug) {
-			if (ptrCategory.get() != NULL) {
-				LogPrintf("debug turned off: thread %s\n", GetThreadName());
-				ptrCategory.release();
-			}
-			return false;
-		}
-
-		if (ptrCategory.get() == NULL)
-		{
-			std::string strThreadName = GetThreadName();
-			LogPrintf("debug turned on:\n");
-			for (int i = 0; i < (int)mapMultiArgs["-debug"].size(); ++i)
-				LogPrintf("  thread %s category %s\n", strThreadName, mapMultiArgs["-debug"][i]);
-			const vector<string>& categories = mapMultiArgs["-debug"];
-			ptrCategory.reset(new set<string>(categories.begin(), categories.end()));
-			// thread_specific_ptr automatically deletes the set when the thread ends.
-			// "ulord" is a composite category enabling all Ulord-related debug output
-			if (ptrCategory->count(string("ulord"))) {
-				ptrCategory->insert(string("privatesend"));
-				ptrCategory->insert(string("instantsend"));
-				ptrCategory->insert(string("masternode"));
-				ptrCategory->insert(string("spork"));
-				ptrCategory->insert(string("keepass"));
-				ptrCategory->insert(string("mnpayments"));
-				ptrCategory->insert(string("gobject"));
-			}
-		}
-		const set<string>& setCategories = *ptrCategory.get();
-
-		// if not debugging everything and not debugging specific category, LogPrint does nothing.
-		if (setCategories.count(string("")) == 0 &&
-			setCategories.count(string("1")) == 0 &&
-			setCategories.count(string(category)) == 0)
-			return false;
-	}
-	return true;
-}
-
-/**
- * fStartedNewLine is a state variable held by the calling context that will
- * suppress printing of the timestamp when multiple calls are made that don't
- * end in a newline. Initialize it to true, and hold/manage it, in the calling context.
- */
-static std::string LogTimestampStr(const std::string &str, bool *fStartedNewLine)
-{
-	string strStamped;
-
-	if (!fLogTimestamps)
-		return str;
-
-	if (*fStartedNewLine) {
-		int64_t nTimeMicros = GetLogTimeMicros();
-		strStamped = DateTimeStrFormat("%Y-%m-%d %H:%M:%S", nTimeMicros / 1000000);
-		if (fLogTimeMicros)
-			strStamped += strprintf(".%06d", nTimeMicros % 1000000);
-		strStamped += ' ' + str;
-	}
-	else
-		strStamped = str;
-
-	return strStamped;
-}
-
-/**
- * fStartedNewLine is a state variable held by the calling context that will
- * suppress printing of the thread name when multiple calls are made that don't
- * end in a newline. Initialize it to true, and hold/manage it, in the calling context.
- */
-static std::string LogThreadNameStr(const std::string &str, bool *fStartedNewLine)
-{
-	string strThreadLogged;
-
-	if (!fLogThreadNames)
-		return str;
-
-	std::string strThreadName = GetThreadName();
-
-	if (*fStartedNewLine)
-		strThreadLogged = strprintf("%16s | %s", strThreadName.c_str(), str.c_str());
-	else
-		strThreadLogged = str;
-
-	return strThreadLogged;
-}
-
-int LogPrintStr(const std::string &str)
-{
-	int ret = 0; // Returns total number of characters written
-	static bool fStartedNewLine = true;
-
-	std::string strThreadLogged = LogThreadNameStr(str, &fStartedNewLine);
-	std::string strTimestamped = LogTimestampStr(strThreadLogged, &fStartedNewLine);
-
-	if (!str.empty() && str[str.size() - 1] == '\n')
-		fStartedNewLine = true;
-	else
-		fStartedNewLine = false;
-
-	if (fPrintToConsole)
-	{
-		// print to console
-		ret = fwrite(strTimestamped.data(), 1, strTimestamped.size(), stdout);
-		fflush(stdout);
-	}
-	else if (fPrintToDebugLog)
-	{
-		std::call_once(debugPrintInitFlag, &DebugPrintInit);
-		boost::mutex::scoped_lock scoped_lock(*mutexDebugLog);
-
-		// buffer if we haven't opened the log yet
-		if (fileout == NULL) {
-			assert(vMsgsBeforeOpenLog);
-			ret = strTimestamped.length();
-			vMsgsBeforeOpenLog->push_back(strTimestamped);
-		}
-		else
-		{
-			// reopen the log file, if requested
-			if (fReopenDebugLog) {
-				fReopenDebugLog = false;
-				boost::filesystem::path pathDebug = GetDataDir() / "debug.log";
-				if (freopen(pathDebug.string().c_str(), "a", fileout) != NULL)
-					setbuf(fileout, NULL); // unbuffered
-			}
-
-			ret = FileWriteStr(strTimestamped, fileout);
-		}
-	}
-	return ret;
 }
 
 /** Interpret string as boolean, for argument parsing */
@@ -500,17 +299,17 @@ static std::string FormatException(const std::exception* pex, const char* pszThr
 	const char* pszModule = "ulord";
 #endif
 	if (pex)
-		return strprintf(
+		return fmt::format(
 			"EXCEPTION: %s       \n%s       \n%s in %s       \n", typeid(*pex).name(), pex->what(), pszModule, pszThread);
 	else
-		return strprintf(
+		return fmt::format(
 			"UNKNOWN EXCEPTION       \n%s in %s       \n", pszModule, pszThread);
 }
 
 void PrintExceptionContinue(const std::exception* pex, const char* pszThread)
 {
 	std::string message = FormatException(pex, pszThread);
-	LogPrintf("\n\n************************\n%s\n", message);
+	LOG_INFO("\n\n************************\n%s\n", message);
 	fprintf(stderr, "\n\n************************\n%s\n", message.c_str());
 }
 
@@ -553,7 +352,7 @@ const boost::filesystem::path &GetDataDir(bool fNetSpecific)
 
 	fs::path &path = fNetSpecific ? pathCachedNetSpecific : pathCached;
 
-	// This can be called during exceptions by LogPrintf(), so we cache the
+	// This can be called during exceptions by LOG_INFO(), so we cache the
 	// value so we don't have to do memory allocations after that.
 	if (!path.empty())
 		return path;
@@ -595,8 +394,8 @@ const boost::filesystem::path &GetBackupsDir()
 		// Path must exist
 		if (fs::is_directory(backupsDir)) return backupsDir;
 		// Fallback to default path if it doesn't
-		LogPrintf("%s: Warning: incorrect parameter -walletbackupsdir, path must exist! Using default path.\n", __func__);
-		strMiscWarning = _("Warning: incorrect parameter -walletbackupsdir, path must exist! Using default path.");
+		LOG_INFO("%s: Warning: incorrect parameter -walletbackupsdir, path must exist! Using default path.\n", __func__);
+		strMiscWarning = "Warning: incorrect parameter -walletbackupsdir, path must exist! Using default path.";
 	}
 	// Default path
 	backupsDir = GetDataDir() / "backups";
@@ -836,7 +635,7 @@ boost::filesystem::path GetSpecialFolderPath(int nFolder, bool fCreate)
 		return fs::path(pszPath);
 	}
 
-	LogPrintf("SHGetSpecialFolderPathA() failed, could not obtain requested path.\n");
+	LOG_INFO("SHGetSpecialFolderPathA() failed, could not obtain requested path.\n");
 	return fs::path("");
 }
 #endif
@@ -856,7 +655,7 @@ boost::filesystem::path GetTempPath() {
 	path = boost::filesystem::path("/tmp");
 #endif
 	if (path.empty() || !boost::filesystem::is_directory(path)) {
-		LogPrintf("GetTempPath(): failed to find temp path\n");
+		LOG_INFO("GetTempPath(): failed to find temp path\n");
 		return boost::filesystem::path("");
 	}
 	return path;
@@ -867,7 +666,7 @@ void runCommand(const std::string& strCommand)
 {
 	int nErr = ::system(strCommand.c_str());
 	if (nErr)
-		LogPrintf("runCommand error: system(%s) returned %d\n", strCommand, nErr);
+		LOG_INFO("runCommand error: system(%s) returned %d\n", strCommand, nErr);
 }
 
 void RenameThread(const char* name)

@@ -5,6 +5,8 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#include <spdlog/fmt/fmt.h>
+
 #include "../amount.h"
 #include "../base58.h"
 #include "../chain.h"
@@ -23,6 +25,7 @@
 #include "../keepass.h"
 #include "../nameclaim.h"
 #include "../rpcprotocol.h"
+#include "../Log.h"
 #include <algorithm>
 #include <stdint.h>
 #include <vector>
@@ -410,7 +413,7 @@ void CreateClaim(CScript& claimScript,CAmount nAmount,CWalletTx& wtxNew)
     if ( pwalletMain->IsLocked() )
     {
         strError = "Error: Wallet locked,unable to create transaction!";
-        LogPrintf("%s() :%s",__func__,strError);
+        LOG_INFO("%s() :%s",__func__,strError);
         throw JSONRPCError(RPC_WALLET_ERROR,strError);
     }
 
@@ -433,9 +436,9 @@ void CreateClaim(CScript& claimScript,CAmount nAmount,CWalletTx& wtxNew)
     {
         if ( nAmount + nFeeRequired > pwalletMain->GetBalance() )
         {
-            strError = strprintf("Error: This transaction requires a transaction fee of at leasst %s because if its amount, complex, or use of recently received funds!",FormatMoney(nFeeRequired));
+            strError = fmt::format("Error: This transaction requires a transaction fee of at leasst %s because if its amount, complex, or use of recently received funds!",FormatMoney(nFeeRequired));
         }
-        LogPrintf("%s() : %s\n",__func__,strError);
+        LOG_INFO("%s() : %s\n",__func__,strError);
         throw JSONRPCError(RPC_WALLET_ERROR,strError);
     }
         
@@ -534,7 +537,7 @@ void UpdateName(const std::vector<unsigned char>vchName,const uint160 claimId,co
     if ( pwalletMain->IsLocked() )
     {   
         strError = "Error: Wallet locked,unable to create transaction!";
-        LogPrintf("%s() : %s",__func__,strError);
+        LOG_INFO("%s() : %s",__func__,strError);
         throw JSONRPCError(RPC_WALLET_ERROR,strError);
     }
 
@@ -557,8 +560,8 @@ void UpdateName(const std::vector<unsigned char>vchName,const uint160 claimId,co
     if ( !pwalletMain->AbandonCash( vecSend,wtxNew,reserveKey,nFeeRequied,nChangePosRet,strError, NULL, true, &wtxIn, nTxOut))
     {
         if ( nAmount + nFeeRequied - wtxIn.vout[nTxOut].nValue > pwalletMain->GetBalance())
-            strError = strprintf("Error: This transaction requires a transaction fee of at leaste %s because of its amount ,complexity,or use of recently recevied funds!",FormatMoney(nFeeRequied));       
-        LogPrintf("%s() : %s\n",__func__,strError);
+            strError = fmt::format("Error: This transaction requires a transaction fee of at leaste %s because of its amount ,complexity,or use of recently recevied funds!",FormatMoney(nFeeRequied));       
+        LOG_INFO("%s() : %s\n",__func__,strError);
         throw JSONRPCError(RPC_WALLET_ERROR,strError);
     }
     if(!pwalletMain->CommitTransaction(wtxNew,reserveKey))
@@ -641,7 +644,7 @@ void AbandonClaim(const CTxDestination &address,CAmount nAmount,CWalletTx& wTxNe
     if ( pwalletMain->IsLocked() )
     {   
         strError = "Error: Wallet locked,unable to create transaction!";
-        LogPrintf("%s() : %s",__func__,strError);
+        LOG_INFO("%s() : %s",__func__,strError);
         throw JSONRPCError(RPC_WALLET_ERROR,strError);
     }
     CScript scriptPubkey = GetScriptForDestination(address);
@@ -656,9 +659,9 @@ void AbandonClaim(const CTxDestination &address,CAmount nAmount,CWalletTx& wTxNe
     {   
         if ( nAmount + nFeeRequired -wTxIn.vout[nTxOut].nValue > pwalletMain->GetBalance() )
         {   
-            strError = strprintf("Error: This transaction requires a transaction fee of a least %s because of its amount ,complexity,or use of recently received funds!",FormatMoney(nFeeRequired));
+            strError = fmt::format("Error: This transaction requires a transaction fee of a least %s because of its amount ,complexity,or use of recently received funds!",FormatMoney(nFeeRequired));
         }
-        LogPrintf("%s() : %s\n",__func__,strError);
+        LOG_INFO("%s() : %s\n",__func__,strError);
         throw JSONRPCError(RPC_WALLET_ERROR,strError);
     }
     if ( !pwalletMain->CommitTransaction(wTxNew,reserveKey))
@@ -745,12 +748,12 @@ void ListNameClaims(const CWalletTx& wtx,const string &strAccount,int nMinDepth,
                 std::vector<std::vector<unsigned char> >vvchParams;
                 if ( !DecodeClaimScript(scriptPubKey,op,vvchParams))
                 {   
-                    LogPrintf("%s():Txout classified as name claim could not be decoded. Txid:%s",__func__,wtx.GetHash().ToString());
+                    LOG_INFO("%s():Txout classified as name claim could not be decoded. Txid:%s",__func__,wtx.GetHash().ToString());
                     continue;
                 }
                 else if ( ((op == OP_CLAIM_NAME || op == OP_SUPPORT_CLAIM) && (vvchParams.size() != 2)) || ((op == OP_UPDATE_CLAIM) && (vvchParams.size() != 3)) )
                 {   
-                    LogPrintf("%s(): Wrong number of params to name claim script. Got %d ,expected %d. Txid: %s",__func__,vvchParams.size(),((op == OP_CLAIM_NAME) ? 2:3),wtx.GetHash().ToString());
+                    LOG_INFO("%s(): Wrong number of params to name claim script. Got %d ,expected %d. Txid: %s",__func__,vvchParams.size(),((op == OP_CLAIM_NAME) ? 2:3),wtx.GetHash().ToString());
                     continue;
                 }
                 string sName (vvchParams[0].begin(),vvchParams[0].end());
@@ -1007,7 +1010,7 @@ static void SendInformation(CScript& msgScript, CAmount nValue, CWalletTx& wtxNe
     if (!pwalletMain->CreateTransaction(vecSend, wtxNew, reservekey, nFeeRequired, nChangePosRet,
                                          strError)) {
         if (nValue + nFeeRequired > pwalletMain->GetBalance())
-            strError = strprintf("Error: This transaction requires a transaction fee of at least %s because of its amount, complexity, or use of recently received funds!", FormatMoney(nFeeRequired));
+            strError = fmt::format("Error: This transaction requires a transaction fee of at least %s because of its amount, complexity, or use of recently received funds!", FormatMoney(nFeeRequired));
         throw JSONRPCError(RPC_WALLET_ERROR, strError);
     }
     if (!pwalletMain->CommitTransaction(wtxNew, reservekey))
@@ -1084,7 +1087,7 @@ static void SendMoney(const CTxDestination &address, CAmount nValue, bool fSubtr
     if (!pwalletMain->CreateTransaction(vecSend, wtxNew, reservekey, nFeeRequired, nChangePosRet,
                                          strError, NULL, true, fUsePrivateSend ? ONLY_DENOMINATED : ALL_COINS, fUseInstantSend)) {
         if (!fSubtractFeeFromAmount && nValue + nFeeRequired > pwalletMain->GetBalance())
-            strError = strprintf("Error: This transaction requires a transaction fee of at least %s because of its amount, complexity, or use of recently received funds!", FormatMoney(nFeeRequired));
+            strError = fmt::format("Error: This transaction requires a transaction fee of at least %s because of its amount, complexity, or use of recently received funds!", FormatMoney(nFeeRequired));
         throw JSONRPCError(RPC_WALLET_ERROR, strError);
     }
     if (!pwalletMain->CommitTransaction(wtxNew, reservekey, fUseInstantSend ? NetMsgType::TXLOCKREQUEST : NetMsgType::TX))
@@ -1178,7 +1181,7 @@ static void SendAllMoney(const CTxDestination &address, CAmount nValue, bool fSu
     if (!pwalletMain->CreateTransaction(vecSend, wtxNew, reservekey, nFeeRequired, nChangePosRet,
                                          strError, NULL, true, fUsePrivateSend ? ONLY_DENOMINATED : ALL_COINS, fUseInstantSend)) {
         if (!fSubtractFeeFromAmount && nValue + nFeeRequired > pwalletMain->GetBalance())
-            strError = strprintf("Error: This transaction requires a transaction fee of at least %s because of its amount, complexity, or use of recently received funds!", FormatMoney(nFeeRequired));
+            strError = fmt::format("Error: This transaction requires a transaction fee of at least %s because of its amount, complexity, or use of recently received funds!", FormatMoney(nFeeRequired));
         throw JSONRPCError(RPC_WALLET_ERROR, strError);
     }
     if (!pwalletMain->CommitTransaction(wtxNew, reservekey, fUseInstantSend ? NetMsgType::TXLOCKREQUEST : NetMsgType::TX))
@@ -1351,7 +1354,7 @@ UniValue sendfromAtoB(const UniValue &params, bool fHelp)
                 nFeeRequired, nChangePosRet,
                 strError, src)) {
         if (!fSubtractFeeFromAmount && nAmount + nFeeRequired > curBalance) {
-            strError = strprintf("Error: This transaction requires a "
+            strError = fmt::format("Error: This transaction requires a "
                     "transaction fee of at least %s",
                     FormatMoney(nFeeRequired));
         }
@@ -1363,7 +1366,7 @@ UniValue sendfromAtoB(const UniValue &params, bool fHelp)
 //    if (!pwalletMain->CommitTransaction(wtx, reservekey, g_connman.get(),
 //                state)) {
 //        strError =
-//            strprintf("Error: The transaction was rejected! Reason given: %s",
+//            fmt::format("Error: The transaction was rejected! Reason given: %s",
 //                    state.GetRejectReason());
 //         throw JSONRPCError(RPC_WALLET_ERROR, strError);
 //    }
@@ -1476,7 +1479,7 @@ UniValue sendallfromAtoB(const UniValue &params, bool fHelp)
                 nFeeRequired, nChangePosRet,
                 strError, src)) {
         if (nAmount + nFeeRequired > curBalance) {
-            strError = strprintf("Error: This transaction requires a "
+            strError = fmt::format("Error: This transaction requires a "
                     "transaction fee of at least %s",
                     FormatMoney(nFeeRequired));
         }
@@ -3735,9 +3738,9 @@ UniValue sendtoaccountname(const UniValue &params, bool fHelp)
 	if (!pwalletMain->CreateTransaction(vecSend, wtxNew, reservekey, nFeeRequired, nChangePosRet, strError)) {
 		if ( nAmount + nFeeRequired > pwalletMain->GetBalance() )
         {
-            strError = strprintf("Error: This transaction requires a transaction fee of at leasst %s because if its amount, complex, or use of recently received funds!",FormatMoney(nFeeRequired));
+            strError = fmt::format("Error: This transaction requires a transaction fee of at leasst %s because if its amount, complex, or use of recently received funds!",FormatMoney(nFeeRequired));
         }
-        LogPrintf("%s() : %s\n",__func__,strError);
+        LOG_INFO("%s() : %s\n",__func__,strError);
         throw JSONRPCError(RPC_WALLET_ERROR,strError);
 	}
 	if ( !pwalletMain->CommitTransaction(wtxNew,reservekey) )

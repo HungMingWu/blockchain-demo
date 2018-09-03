@@ -4,10 +4,11 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#include <spdlog/fmt/fmt.h>
+
 #include "block.h"
 
 #include "../hash.h"
-#include "../tinyformat.h"
 #include "../utilstrencodings.h"
 //#include "crypto/common.h"
 
@@ -25,22 +26,18 @@ uint256 CBlockHeader::GetHash() const
 
 std::string CBlockHeader::ToString() const                                                                                                                                                                                                                                   
 {
-    std::stringstream s;
-    s << strprintf("CBlock(hash=%s, ver=%d, hashPrevBlock=%s, hashMerkleRoot=%s, hashClaimTrie=%s, nTime=%u, nBits=%08x, nNonce=%s)\n",
+    return fmt::format("CBlock(hash=%s, ver=%d, hashPrevBlock=%s, hashMerkleRoot=%s, hashClaimTrie=%s, nTime=%u, nBits=%08x, nNonce=%s)\n",
 		GetHash().ToString(),
         nVersion,
         hashPrevBlock.ToString(),
         hashMerkleRoot.ToString(),
         hashClaimTrie.ToString(),
         nTime, nBits, nNonce.ToString());
-
-    return s.str();
 }
 
 std::string CBlock::ToString() const
 {
-    std::stringstream s;
-    s << strprintf("CBlock(hash=%s, ver=%d, hashPrevBlock=%s, hashMerkleRoot=%s, hashClaimTrie=%s, nTime=%u, nBits=%08x, nNonce=%s, vtx=%u)\n",
+    std::string s = fmt::format("CBlock(hash=%s, ver=%d, hashPrevBlock=%s, hashMerkleRoot=%s, hashClaimTrie=%s, nTime=%u, nBits=%08x, nNonce=%s, vtx=%u)\n",
         GetHash().ToString(),
         nVersion,
         hashPrevBlock.ToString(),
@@ -50,7 +47,7 @@ std::string CBlock::ToString() const
         vtx.size());
     for (unsigned int i = 0; i < vtx.size(); i++)
     {
-        s << "  " << vtx[i].ToString() << "\n";
+        s += "  "  + vtx[i].ToString() + "\n";
     }
-    return s.str();
+    return s;
 }

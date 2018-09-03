@@ -31,6 +31,7 @@
 #include "masternode-sync.h"
 #include "validationinterface.h"
 #include "arith_uint256.h"
+#include "Log.h"
 
 #include <boost/thread.hpp>
 #include <boost/tuple/tuple.hpp>
@@ -275,7 +276,7 @@ CBlockTemplate* CreateNewBlock(const CChainParams& chainparams, const CScript& s
                 }
                 if (!fGotCoins)
                 {
-                    LogPrintf("Tried to include a transaction but could not find the txout it was spending. This is bad. Please send this log file to the maintainers of this program.\n");
+                    LOG_INFO("Tried to include a transaction but could not find the txout it was spending. This is bad. Please send this log file to the maintainers of this program.\n");
                     throw std::runtime_error("Tried to include a transaction but could not find the txout it was spending.");
                 }
 
@@ -306,7 +307,7 @@ CBlockTemplate* CreateNewBlock(const CChainParams& chainparams, const CScript& s
                         }
                         else
                         {
-                            LogPrintf("%s(): The claim was not found in the trie or queue and therefore can't be updated\n", __func__);
+                            LOG_INFO("%s(): The claim was not found in the trie or queue and therefore can't be updated\n", __func__);
                         }
                     }
                     else if (op == OP_SUPPORT_CLAIM)
@@ -316,7 +317,7 @@ CBlockTemplate* CreateNewBlock(const CChainParams& chainparams, const CScript& s
                         int throwaway;
                         if (!trieCache.spendSupport(name, COutPoint(txin.prevout.hash, txin.prevout.n), nTxinHeight, throwaway))
                         {
-                            LogPrintf("%s(): The support was not found in the trie or queue\n", __func__);
+                            LOG_INFO("%s(): The support was not found in the trie or queue\n", __func__);
                         }
                     }
                 }
@@ -337,7 +338,7 @@ CBlockTemplate* CreateNewBlock(const CChainParams& chainparams, const CScript& s
 			std::string addr(vvchParams[1].begin(), vvchParams[1].end());
                         if (!trieCache.addClaim(name, COutPoint(tx.GetHash(), i), ClaimIdHash(tx.GetHash(), i), txout.nValue, nHeight,addr))
                         {
-                            LogPrintf("%s: Something went wrong inserting the name\n", __func__);
+                            LOG_INFO("%s: Something went wrong inserting the name\n", __func__);
                         }
                     }
                     else if (op == OP_UPDATE_CLAIM)
@@ -359,12 +360,12 @@ CBlockTemplate* CreateNewBlock(const CChainParams& chainparams, const CScript& s
                             spentClaims.erase(itSpent);
                             if (!trieCache.addClaim(name, COutPoint(tx.GetHash(), i), claimId, txout.nValue, nHeight,addr))
                             {
-                                LogPrintf("%s: Something went wrong updating a claim\n", __func__);
+                                LOG_INFO("%s: Something went wrong updating a claim\n", __func__);
                             }
                         }
                         else
                         {
-                            LogPrintf("%s(): This update refers to a claim that was not found in the trie or queue, and therefore cannot be updated. The claim may have expired or it may have never existed.\n", __func__);
+                            LOG_INFO("%s(): This update refers to a claim that was not found in the trie or queue, and therefore cannot be updated. The claim may have expired or it may have never existed.\n", __func__);
                         }
                     }
                     else if (op == OP_SUPPORT_CLAIM)
@@ -374,7 +375,7 @@ CBlockTemplate* CreateNewBlock(const CChainParams& chainparams, const CScript& s
                         uint160 supportedClaimId(vvchParams[1]);
                         if (!trieCache.addSupport(name, COutPoint(tx.GetHash(), i), txout.nValue, supportedClaimId, nHeight))
                         {
-                            LogPrintf("%s: Something went wrong inserting the claim support\n", __func__);
+                            LOG_INFO("%s: Something went wrong inserting the claim support\n", __func__);
                         }
                     }
                 }
@@ -404,7 +405,7 @@ CBlockTemplate* CreateNewBlock(const CChainParams& chainparams, const CScript& s
                 double dPriority = iter->GetPriority(nHeight);
                 CAmount dummy;
                 mempool.ApplyDeltas(tx.GetHash(), dPriority, dummy);
-                LogPrintf("priority %.1f fee %s txid %s\n",
+                LOG_INFO("priority %.1f fee %s txid %s\n",
                           dPriority , CFeeRate(iter->GetModifiedFee(), nTxSize).ToString(), tx.GetHash().ToString());
             }
 
@@ -440,12 +441,12 @@ CBlockTemplate* CreateNewBlock(const CChainParams& chainparams, const CScript& s
         // Update coinbase transaction with additional info about masternode and governace payments,
         // get some info back to pass to getblocktemplate
         FillBlockPayments(txNew, nHeight, blockReward, pblock->txoutMasternode, pblock->voutSuperblock,pblock->txoutFound);
-        // LogPrintf("CreateNewBlock -- nBlockHeight %d blockReward %lld txoutMasternode %s txNew %s",
+        // LOG_INFO("CreateNewBlock -- nBlockHeight %d blockReward %lld txoutMasternode %s txNew %s",
         //             nHeight, blockReward, pblock->txoutMasternode.ToString(), txNew.ToString());
 
         nLastBlockTx = nBlockTx;
         nLastBlockSize = nBlockSize;
-        LogPrintf("CreateNewBlock(): total size %u txs: %u fees: %ld sigops %d\n", nBlockSize, nBlockTx, nFees, nBlockSigOps);
+        LOG_INFO("CreateNewBlock(): total size %u txs: %u fees: %ld sigops %d\n", nBlockSize, nBlockTx, nFees, nBlockSigOps);
 
         // Update block coinbase
         pblock->vtx[0] = txNew;
@@ -475,7 +476,7 @@ CBlockTemplate* CreateNewBlock(const CChainParams& chainparams, const CScript& s
         //pblock->hashClaimTrie = trieCache.getMerkleHash();
         CValidationState state;
         if (!TestBlockValidity(state, chainparams, *pblock, pindexPrev, false, false)) {
-            throw std::runtime_error(strprintf("%s: TestBlockValidity failed: %s", __func__, FormatStateMessage(state)));
+            throw std::runtime_error(fmt::format("%s: TestBlockValidity failed: %s", __func__, FormatStateMessage(state)));
         }
     }
 
@@ -503,16 +504,17 @@ void IncrementExtraNonce(CBlock* pblock, const CBlockIndex* pindexPrev, unsigned
 
 static bool ProcessBlockFound(const CBlock* pblock, const CChainParams& chainparams)
 {
-    LogPrintf("%s\n", pblock->ToString());
-    LogPrintf("generated %s\n", FormatMoney(pblock->vtx[0].vout[0].nValue));
+    LOG_INFO("%s\n", pblock->ToString());
+    LOG_INFO("generated %s\n", FormatMoney(pblock->vtx[0].vout[0].nValue));
 
     // Found a solution
     {
         LOCK(cs_main);
         if (pblock->hashPrevBlock != chainActive.Tip()->GetBlockHash())
 		{
-			//LogPrintf("hashPrevBlock = %s, Tip hash = %s\n", pblock->hashPrevBlock, chainActive.Tip()->GetBlockHash());
-			return error("ProcessBlockFound -- generated block is stale");
+			//LOG_INFO("hashPrevBlock = %s, Tip hash = %s\n", pblock->hashPrevBlock, chainActive.Tip()->GetBlockHash());
+			LOG_ERROR("ProcessBlockFound -- generated block is stale");
+			return false;
 		}
     }
 
@@ -521,8 +523,11 @@ static bool ProcessBlockFound(const CBlock* pblock, const CChainParams& chainpar
 
     // Process this block the same as if we had received it from another node
     CValidationState state;
-    if (!ProcessNewBlock(state, chainparams, NULL, pblock, true, NULL))
-        return error("ProcessBlockFound -- ProcessNewBlock() failed, block not accepted");
+	if (!ProcessNewBlock(state, chainparams, NULL, pblock, true, NULL))
+	{
+		LOG_ERROR("ProcessBlockFound -- ProcessNewBlock() failed, block not accepted");
+		return false;
+	}
 
     return true;
 }
@@ -530,7 +535,7 @@ static bool ProcessBlockFound(const CBlock* pblock, const CChainParams& chainpar
 // ***TODO*** that part changed in bitcoin, we are using a mix with old one here for now
 void static BitcoinMiner(const CChainParams& chainparams)
 {
-    LogPrintf("UlordMiner -- started\n");
+    LOG_INFO("UlordMiner -- started\n");
     SetThreadPriority(THREAD_PRIORITY_LOWEST);
     RenameThread("ulord-miner");
 
@@ -575,13 +580,13 @@ void static BitcoinMiner(const CChainParams& chainparams)
             unique_ptr<CBlockTemplate> pblocktemplate(CreateNewBlock(chainparams, coinbaseScript->reserveScript));
             if (!pblocktemplate.get())
             {
-                LogPrintf("UlordMiner -- Keypool ran out, please call keypoolrefill before restarting the mining thread\n");
+                LOG_INFO("UlordMiner -- Keypool ran out, please call keypoolrefill before restarting the mining thread\n");
                 return;
             }
             CBlock *pblock = &pblocktemplate->block;
             IncrementExtraNonce(pblock, pindexPrev, nExtraNonce);
 
-            LogPrintf("UlordMiner -- Running miner with %u transactions in block (%u bytes)\n", pblock->vtx.size(),
+            LOG_INFO("UlordMiner -- Running miner with %u transactions in block (%u bytes)\n", pblock->vtx.size(),
                 ::GetSerializeSize(*pblock, SER_NETWORK, PROTOCOL_VERSION));
 
             //
@@ -599,7 +604,7 @@ void static BitcoinMiner(const CChainParams& chainparams)
                     {
                         // Found a solution
                         SetThreadPriority(THREAD_PRIORITY_NORMAL);
-                        LogPrintf("UlordMiner:\n  proof-of-work found\n  hash: %s\n  target: %s\n", hash.GetHex(), hashTarget.GetHex());
+                        LOG_INFO("UlordMiner:\n  proof-of-work found\n  hash: %s\n  target: %s\n", hash.GetHex(), hashTarget.GetHex());
                         ProcessBlockFound(pblock, chainparams);
                         SetThreadPriority(THREAD_PRIORITY_LOWEST);
                         coinbaseScript->KeepScript();
@@ -614,7 +619,7 @@ void static BitcoinMiner(const CChainParams& chainparams)
                     pblock->nNonce = ArithToUint256(UintToArith256(pblock->nNonce) + 1);
                     if ((UintToArith256(pblock->nNonce) & 0xFF) == 0)
 		            {
-			            //LogPrintf("UlordMiner: %d   nExtraNonce: %d\n", pblock->nNonce, nExtraNonce);    
+			            //LOG_INFO("UlordMiner: %d   nExtraNonce: %d\n", pblock->nNonce, nExtraNonce);    
 		                break;
                     }
                 }
@@ -645,12 +650,12 @@ void static BitcoinMiner(const CChainParams& chainparams)
     }
     catch (const boost::thread_interrupted&)
     {
-        LogPrintf("UlordMiner -- terminated\n");
+        LOG_INFO("UlordMiner -- terminated\n");
         throw;
     }
     catch (const std::runtime_error &e)
     {
-        LogPrintf("UlordMiner -- runtime error: %s\n", e.what());
+        LOG_INFO("UlordMiner -- runtime error: %s\n", e.what());
         return;
     }
 }

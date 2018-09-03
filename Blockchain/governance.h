@@ -18,6 +18,7 @@
 #include "sync.h"
 #include "timedata.h"
 #include "util.h"
+#include "Log.h"
 
 class CGovernanceManager;
 class CGovernanceTriggerManager;
@@ -298,7 +299,7 @@ public:
     {
         LOCK(cs);
 
-        LogPrint("gobject", "Governance object manager was cleared\n");
+        LOG_INFO("Governance object manager was cleared\n");
         mapObjects.clear();
         mapSeenGovernanceObjects.clear();
         mapWatchdogObjects.clear();

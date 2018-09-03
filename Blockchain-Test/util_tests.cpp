@@ -278,33 +278,6 @@ TEST_CASE("util_TimingResistantEqual")
 	REQUIRE(!TimingResistantEqual(std::string("abc"), std::string("aba")));
 }
 
-/* Test strprintf formatting directives.
- * Put a string before and after to ensure sanity of element sizes on stack. */
-#define B "check_prefix"
-#define E "check_postfix"
-TEST_CASE("strprintf_numbers")
-{
-	int64_t s64t = -9223372036854775807LL; /* signed 64 bit test value */
-	uint64_t u64t = 18446744073709551615ULL; /* unsigned 64 bit test value */
-	REQUIRE(strprintf("%s %d %s", B, s64t, E) == B" -9223372036854775807 " E);
-	REQUIRE(strprintf("%s %u %s", B, u64t, E) == B" 18446744073709551615 " E);
-	REQUIRE(strprintf("%s %x %s", B, u64t, E) == B" ffffffffffffffff " E);
-
-	size_t st = 12345678; /* unsigned size_t test value */
-	/*ssize_t */ int sst = -12345678; /* signed size_t test value */
-	REQUIRE(strprintf("%s %d %s", B, sst, E) == B" -12345678 " E);
-	REQUIRE(strprintf("%s %u %s", B, st, E) == B" 12345678 " E);
-	REQUIRE(strprintf("%s %x %s", B, st, E) == B" bc614e " E);
-
-	ptrdiff_t pt = 87654321; /* positive ptrdiff_t test value */
-	ptrdiff_t spt = -87654321; /* negative ptrdiff_t test value */
-	REQUIRE(strprintf("%s %d %s", B, spt, E) == B" -87654321 " E);
-	REQUIRE(strprintf("%s %u %s", B, pt, E) == B" 87654321 " E);
-	REQUIRE(strprintf("%s %x %s", B, pt, E) == B" 5397fb1 " E);
-}
-#undef B
-#undef E
-
 /* Check for mingw/wine issue #3494
  * Remove this test before time.ctime(0xffffffff) == 'Sun Feb  7 07:28:15 2106'
  */

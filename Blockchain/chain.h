@@ -7,10 +7,11 @@
 #ifndef ULORD_CHAIN_H
 #define ULORD_CHAIN_H
 
+#include <spdlog/fmt/fmt.h>
+
 #include "arith_uint256.h"
 #include "primitives/block.h"
 #include "pow.h"
-#include "tinyformat.h"
 #include "uint256.h"
 
 #include <vector>
@@ -50,7 +51,7 @@ struct CDiskBlockPos
 
     std::string ToString() const
     {
-        return strprintf("CBlockDiskPos(nFile=%i, nPos=%i)", nFile, nPos);
+        return fmt::format("CBlockDiskPos(nFile=%i, nPos=%i)", nFile, nPos);
     }
 
 };
@@ -220,8 +221,8 @@ public:
 
     std::string ToString() const
     {
-        return strprintf("CBlockIndex(pprev=%p, nHeight=%d, merkle=%s, claimtrie=%s, hashBlock=%s)",
-            pprev, nHeight,
+        return fmt::format("CBlockIndex(pprev=%p, nHeight=%d, merkle=%s, claimtrie=%s, hashBlock=%s)",
+            (void *)pprev, nHeight,
             hashMerkleRoot.ToString(),
             hashClaimTrie.ToString(),
             GetBlockHash().ToString());
@@ -324,7 +325,7 @@ public:
     {
         std::string str = "CDiskBlockIndex(";
         str += CBlockIndex::ToString();
-        str += strprintf("\n                hashBlock=%s, hashPrev=%s)",
+        str += fmt::format("\n                hashBlock=%s, hashPrev=%s)",
             GetBlockHash().ToString(),
             hashPrev.ToString());
         return str;

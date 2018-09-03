@@ -2,6 +2,8 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#include <spdlog/fmt/fmt.h>
+
 #include "httpserver.h"
 
 #include "chainparamsbase.h"
@@ -214,7 +216,7 @@ static bool InitHTTPAllowList()
             CSubNet suulord(strAllow);
             if (!suulord.IsValid()) {
                 uiInterface.ThreadSafeMessageBox(
-                    strprintf("Invalid -rpcallowip suulord specification: %s. Valid are a single IP (e.g. 1.2.3.4), a network/netmask (e.g. 1.2.3.4/255.255.255.0) or a network/CIDR (e.g. 1.2.3.4/24).", strAllow),
+                    fmt::format("Invalid -rpcallowip suulord specification: %s. Valid are a single IP (e.g. 1.2.3.4), a network/netmask (e.g. 1.2.3.4/255.255.255.0) or a network/CIDR (e.g. 1.2.3.4/24).", strAllow),
                     "", CClientUIInterface::MSG_ERROR);
                 return false;
             }
@@ -224,7 +226,7 @@ static bool InitHTTPAllowList()
     std::string strAllowed;
     for (const CSubNet& suulord : rpc_allow_suulords)
         strAllowed += suulord.ToString() + " ";
-    LogPrint("http", "Allowing HTTP connections from: %s\n", strAllowed);
+    LOG_INFO("Allowing HTTP connections from: %s\n", strAllowed);
     return true;
 }
 
@@ -254,7 +256,7 @@ static void http_request_cb(struct evhttp_request* req, void* arg)
 {
     std::unique_ptr<HTTPRequest> hreq(new HTTPRequest(req));
 
-    LogPrint("http", "Received a %s request for %s from %s\n",
+    LOG_INFO("Received a %s request for %s from %s\n",
              RequestMethodString(hreq->GetRequestMethod()), hreq->GetURI(), hreq->GetPeer().ToString());
 
     // Early address-based allow check
@@ -302,7 +304,7 @@ static void http_request_cb(struct evhttp_request* req, void* arg)
 /** Callback to reject HTTP requests after shutdown. */
 static void http_reject_request_cb(struct evhttp_request* req, void*)
 {
-    LogPrint("http", "Rejecting request while shutting down\n");
+    LOG_INFO("Rejecting request while shutting down\n");
     evhttp_send_error(req, HTTP_SERVUNAVAIL, NULL);
 }
 
@@ -310,10 +312,10 @@ static void http_reject_request_cb(struct evhttp_request* req, void*)
 static void ThreadHTTP(struct event_base* base, struct evhttp* http)
 {
     RenameThread("ulord-http");
-    LogPrint("http", "Entering http event loop\n");
+    LOG_INFO("Entering http event loop\n");
     event_base_dispatch(base);
     // Event loop will be interrupted by InterruptHTTPServer()
-    LogPrint("http", "Exited http event loop\n");
+    LOG_INFO("Exited http event loop\n");
 }
 
 /** Bind HTTP server to specified addresses */
@@ -344,7 +346,7 @@ static bool HTTPBindAddresses(struct evhttp* http)
 
     // Bind addresses
     for (std::vector<std::pair<std::string, uint16_t> >::iterator i = endpoints.begin(); i != endpoints.end(); ++i) {
-        LogPrint("http", "Binding RPC on address %s port %i\n", i->first, i->second);
+        LOG_INFO("Binding RPC on address %s port %i\n", i->first, i->second);
         evhttp_bound_socket *bind_handle = evhttp_bind_socket_with_handle(http, i->first.empty() ? NULL : i->first.c_str(), i->second);
         if (bind_handle) {
             boundSockets.push_back(bind_handle);
@@ -372,7 +374,7 @@ static void libevent_log_cb(int severity, const char *msg)
     if (severity >= EVENT_LOG_WARN) // Log warn messages and higher without debug category
         LOG_INFO("libevent: %s\n", msg);
     else
-        LogPrint("libevent", "libevent: %s\n", msg);
+        LOG_INFO("libevent: %s\n", msg);
 }
 
 bool InitHTTPServer()
@@ -392,14 +394,6 @@ bool InitHTTPServer()
 
     // Redirect libevent's logging to our own log
     event_set_log_callback(&libevent_log_cb);
-#if LIBEVENT_VERSION_NUMBER >= 0x02010100
-    // If -debug=libevent, set full libevent debugging.
-    // Otherwise, disable all libevent debugging.
-    if (LogAcceptCategory("libevent"))
-        event_enable_debug_logging(EVENT_DBG_ALL);
-    else
-        event_enable_debug_logging(EVENT_DBG_NONE);
-#endif
 #ifdef WIN32
     evthread_use_windows_threads();
 #else
@@ -432,7 +426,7 @@ bool InitHTTPServer()
         return false;
     }
 
-    LogPrint("http", "Initialized HTTP server\n");
+    LOG_INFO("Initialized HTTP server\n");
     int workQueueDepth = std::max((long)GetArg("-rpcworkqueue", DEFAULT_HTTP_WORKQUEUE), 1L);
     LOG_INFO("HTTP: creating work queue of depth %d\n", workQueueDepth);
 
@@ -446,7 +440,7 @@ boost::thread threadHTTP;
 
 bool StartHTTPServer()
 {
-    LogPrint("http", "Starting HTTP server\n");
+    LOG_INFO("Starting HTTP server\n");
     int rpcThreads = std::max((long)GetArg("-rpcthreads", DEFAULT_HTTP_THREADS), 1L);
     LOG_INFO("HTTP: starting %d worker threads\n", rpcThreads);
     threadHTTP = boost::thread(std::bind(&ThreadHTTP, eventBase, eventHTTP));
@@ -458,7 +452,7 @@ bool StartHTTPServer()
 
 void InterruptHTTPServer()
 {
-    LogPrint("http", "Interrupting HTTP server\n");
+    LOG_INFO("Interrupting HTTP server\n");
     if (eventHTTP) {
         // Unlisten sockets
         for (evhttp_bound_socket *socket : boundSockets) {
@@ -473,9 +467,9 @@ void InterruptHTTPServer()
 
 void StopHTTPServer()
 {
-    LogPrint("http", "Stopping HTTP server\n");
+    LOG_INFO("Stopping HTTP server\n");
     if (workQueue) {
-        LogPrint("http", "Waiting for HTTP worker threads to exit\n");
+        LOG_INFO("Waiting for HTTP worker threads to exit\n");
 #ifndef WIN32
         // ToDo: Disabling WaitExit() for Windows platforms is an ugly workaround for the wallet not
         // closing during a repair-restart. It doesn't hurt, though, because threadHTTP.timed_join
@@ -485,7 +479,7 @@ void StopHTTPServer()
         delete workQueue;
     }
     if (eventBase) {
-        LogPrint("http", "Waiting for HTTP event thread to exit\n");
+        LOG_INFO("Waiting for HTTP event thread to exit\n");
         // Give event loop a few seconds to exit (to send back last RPC responses), then break it
         // Before this was solved with event_base_loopexit, but that didn't work as expected in
         // at least libevent 2.0.21 and always introduced a delay. In libevent
@@ -506,7 +500,7 @@ void StopHTTPServer()
         event_base_free(eventBase);
         eventBase = 0;
     }
-    LogPrint("http", "Stopped HTTP server\n");
+    LOG_INFO("Stopped HTTP server\n");
 }
 
 struct event_base* EventBase()
@@ -653,7 +647,7 @@ HTTPRequest::RequestMethod HTTPRequest::GetRequestMethod()
 
 void RegisterHTTPHandler(const std::string &prefix, bool exactMatch, const HTTPRequestHandler &handler)
 {
-    LogPrint("http", "Registering HTTP handler for %s (exactmatch %d)\n", prefix, exactMatch);
+    LOG_INFO("Registering HTTP handler for %s (exactmatch %d)\n", prefix, exactMatch);
     pathHandlers.push_back(HTTPPathHandler(prefix, exactMatch, handler));
 }
 
@@ -666,7 +660,7 @@ void UnregisterHTTPHandler(const std::string &prefix, bool exactMatch)
             break;
     if (i != iend)
     {
-        LogPrint("http", "Unregistering HTTP handler for %s (exactmatch %d)\n", prefix, exactMatch);
+        LOG_INFO("Unregistering HTTP handler for %s (exactmatch %d)\n", prefix, exactMatch);
         pathHandlers.erase(i);
     }
 }

@@ -2,6 +2,9 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 // script convert asm ，script format output
+
+#include <spdlog/fmt/fmt.h>
+
 #include "core_io.h"
 
 #include "base58.h"
@@ -31,7 +34,7 @@ string FormatScript(const CScript& script)
                 ret += "0 ";
                 continue;
             } else if ((op >= OP_1 && op <= OP_16) || op == OP_1NEGATE) {
-                ret += strprintf("%i ", op - OP_1NEGATE - 1);
+                ret += fmt::format("%i ", op - OP_1NEGATE - 1);
                 continue;
             } else if (op >= OP_NOP && op <= OP_NOP10) {
                 string str(GetOpName(op));
@@ -41,13 +44,13 @@ string FormatScript(const CScript& script)
                 }
             }
             if (vch.size() > 0) {
-                ret += strprintf("0x%x 0x%x ", HexStr(it2, it - vch.size()), HexStr(it - vch.size(), it));
+                ret += fmt::format("0x%x 0x%x ", HexStr(it2, it - vch.size()), HexStr(it - vch.size(), it));
             } else {
-                ret += strprintf("0x%x ", HexStr(it2, it));
+                ret += fmt::format("0x%x ", HexStr(it2, it));
             }
             continue;
         }
-        ret += strprintf("0x%x ", HexStr(it2, script.end()));
+        ret += fmt::format("0x%x ", HexStr(it2, script.end()));
         break;
     }
     return ret.substr(0, ret.size() - 1);
@@ -86,7 +89,7 @@ string ScriptToAsmStr(const CScript& script, const bool fAttemptSighashDecode)
         }
         if (0 <= opcode && opcode <= OP_PUSHDATA4) {
             if (vch.size() <= static_cast<vector<unsigned char>::size_type>(4)) {
-                str += strprintf("%d", CScriptNum(vch, false).getint());
+                str += fmt::format("%d", CScriptNum(vch, false).getint());
             } else {
                 // the IsUnspendable check makes sure not to try to decode OP_RETURN data that may match the format of a signature
                 if (fAttemptSighashDecode && !script.IsUnspendable()) {

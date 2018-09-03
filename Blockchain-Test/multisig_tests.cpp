@@ -84,48 +84,36 @@ TEST_CASE("multisig_verify")
 		REQUIRE(err == SCRIPT_ERR_OK);
 	}
 
-	for (int i = 0; i < 4; i++)
-	{
-		keys.assign(1, key[i]);
-		s = sign_multisig(a_and_b, keys, txTo[0], 0);
-		SECTION(strprintf("a&b 1: %d", i)) {
+	SECTION("a&b") {
+		for (int i = 0; i < 4; i++)
+		{
+			keys.assign(1, key[i]);
+			s = sign_multisig(a_and_b, keys, txTo[0], 0);
 			REQUIRE(!VerifyScript(s, a_and_b, flags, MutableTransactionSignatureChecker(&txTo[0], 0), &err));
-		}
-		SECTION(ScriptErrorString(err)) {
 			REQUIRE(err == SCRIPT_ERR_INVALID_STACK_OPERATION);
-		}
 
-		keys.assign(1, key[1]);
-		keys.push_back(key[i]);
-		s = sign_multisig(a_and_b, keys, txTo[0], 0);
-		SECTION(strprintf("a&b 2: %d", i)) {
+			keys.assign(1, key[1]);
+			keys.push_back(key[i]);
+			s = sign_multisig(a_and_b, keys, txTo[0], 0);
 			REQUIRE(!VerifyScript(s, a_and_b, flags, MutableTransactionSignatureChecker(&txTo[0], 0), &err));
-		}
-		SECTION(ScriptErrorString(err)) {
 			REQUIRE(err == SCRIPT_ERR_EVAL_FALSE);
 		}
 	}
 
 	// Test a OR b:
-	for (int i = 0; i < 4; i++)
-	{
-		keys.assign(1, key[i]);
-		s = sign_multisig(a_or_b, keys, txTo[1], 0);
-		if (i == 0 || i == 1)
+	SECTION("a|b") {
+		for (int i = 0; i < 4; i++)
 		{
-			SECTION(strprintf("a|b: %d", i)) {
+			keys.assign(1, key[i]);
+			s = sign_multisig(a_or_b, keys, txTo[1], 0);
+			if (i == 0 || i == 1)
+			{
 				REQUIRE(VerifyScript(s, a_or_b, flags, MutableTransactionSignatureChecker(&txTo[1], 0), &err));
-			}
-			SECTION(ScriptErrorString(err)) {
 				REQUIRE(err == SCRIPT_ERR_OK);
 			}
-		}
-		else
-		{
-			SECTION(strprintf("a|b: %d", i)) {
+			else
+			{
 				REQUIRE(!VerifyScript(s, a_or_b, flags, MutableTransactionSignatureChecker(&txTo[1], 0), &err));
-			}
-			SECTION(ScriptErrorString(err)) {
 				REQUIRE(err == SCRIPT_ERR_EVAL_FALSE);
 			}
 		}
@@ -137,32 +125,25 @@ TEST_CASE("multisig_verify")
 		REQUIRE(err == SCRIPT_ERR_SIG_DER);
 	}
 
-
-	for (int i = 0; i < 4; i++)
-		for (int j = 0; j < 4; j++)
-		{
-			keys.assign(1, key[i]);
-			keys.push_back(key[j]);
-			s = sign_multisig(escrow, keys, txTo[2], 0);
-			if (i < j && i < 3 && j < 3)
+	SECTION("escrow") {
+		for (int i = 0; i < 4; i++)
+			for (int j = 0; j < 4; j++)
 			{
-				SECTION(strprintf("escrow 1: %d %d", i, j)) {
+				keys.assign(1, key[i]);
+				keys.push_back(key[j]);
+				s = sign_multisig(escrow, keys, txTo[2], 0);
+				if (i < j && i < 3 && j < 3)
+				{
 					REQUIRE(VerifyScript(s, escrow, flags, MutableTransactionSignatureChecker(&txTo[2], 0), &err));
-				}
-				SECTION(ScriptErrorString(err)) {
 					REQUIRE(err == SCRIPT_ERR_OK);
 				}
-			}
-			else
-			{
-				SECTION(strprintf("escrow 2: %d %d", i, j)) {
+				else
+				{
 					REQUIRE(!VerifyScript(s, escrow, flags, MutableTransactionSignatureChecker(&txTo[2], 0), &err));
-				}
-				SECTION(ScriptErrorString(err)) {
 					REQUIRE(err == SCRIPT_ERR_EVAL_FALSE);
 				}
 			}
-		}
+	}
 }
 
 TEST_CASE("multisig_IsStandard")
@@ -334,9 +315,9 @@ TEST_CASE("multisig_Sign")
 		txTo[i].vout[0].nValue = 1;
 	}
 
-	for (int i = 0; i < 3; i++)
-	{
-		SECTION(strprintf("SignSignature %d", i)) {
+	SECTION("SignSignature") {
+		for (int i = 0; i < 3; i++)
+		{
 			REQUIRE(SignSignature(keystore, txFrom, txTo[i], 0));
 		}
 	}

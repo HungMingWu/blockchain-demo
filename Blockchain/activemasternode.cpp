@@ -69,7 +69,7 @@ std::string CActiveMasternode::GetStatus() const
     switch (nState) {
         case ACTIVE_MASTERNODE_INITIAL:         return "Node just started, not yet activated";
         case ACTIVE_MASTERNODE_SYNC_IN_PROCESS: return "Sync in progress. Must wait until sync is complete to start Masternode";
-        case ACTIVE_MASTERNODE_INPUT_TOO_NEW:   return strprintf("Masternode input must have at least %d confirmations", Params().GetConsensus().nMasternodeMinimumConfirmations);
+        case ACTIVE_MASTERNODE_INPUT_TOO_NEW:   return fmt::format("Masternode input must have at least %d confirmations", Params().GetConsensus().nMasternodeMinimumConfirmations);
         case ACTIVE_MASTERNODE_NOT_CAPABLE:     return "Not capable masternode: " + strNotCapableReason;
         case ACTIVE_MASTERNODE_STARTED:         return "Masternode successfully started";
         default:                                return "Unknown";
@@ -180,13 +180,13 @@ void CActiveMasternode::ManageStateInitial()
     if(Params().NetworkIDString() == CBaseChainParams::MAIN) {
         if(service.GetPort() != mainnetDefaultPort) {
             nState = ACTIVE_MASTERNODE_NOT_CAPABLE;
-            strNotCapableReason = strprintf("Invalid port: %u - only %d is supported on mainnet.", service.GetPort(), mainnetDefaultPort);
+            strNotCapableReason = fmt::format("Invalid port: %u - only %d is supported on mainnet.", service.GetPort(), mainnetDefaultPort);
 			LOG_INFO("CActiveMasternode::ManageStateInitial -- {}: {}", GetStateString(), strNotCapableReason);
             return;
         }
     } else if(service.GetPort() == mainnetDefaultPort) {
         nState = ACTIVE_MASTERNODE_NOT_CAPABLE;
-        strNotCapableReason = strprintf("Invalid port: %u - %d is only supported on mainnet.", service.GetPort(), mainnetDefaultPort);
+        strNotCapableReason = fmt::format("Invalid port: %u - %d is only supported on mainnet.", service.GetPort(), mainnetDefaultPort);
 		LOG_INFO("CActiveMasternode::ManageStateInitial -- {}: {}", GetStateString(), strNotCapableReason);
         return;
     }
@@ -242,7 +242,7 @@ void CActiveMasternode::ManageStateInitial()
 
 void CActiveMasternode::ManageStateRemote()
 {
-    LogPrint("masternode", "CActiveMasternode::ManageStateRemote -- Start status = %s, type = %s, pinger enabled = %d, pubKeyMasternode.GetID() = %s\n", 
+    LOG_INFO("CActiveMasternode::ManageStateRemote -- Start status = %s, type = %s, pinger enabled = %d, pubKeyMasternode.GetID() = %s\n", 
              GetStatus(), fPingerEnabled, GetTypeString(), pubKeyMasternode.GetID().ToString());
 
     mnodeman.CheckMasternode(pubKeyMasternode);
@@ -268,7 +268,7 @@ void CActiveMasternode::ManageStateRemote()
         }
         if (!CMasternode::IsValidStateForAutoStart(infoMn->nActiveState)) {
             nState = ACTIVE_MASTERNODE_NOT_CAPABLE;
-            strNotCapableReason = strprintf("Masternode in %s state", CMasternode::StateToString(infoMn->nActiveState));
+            strNotCapableReason = fmt::format("Masternode in %s state", CMasternode::StateToString(infoMn->nActiveState));
 			LOG_INFO("CActiveMasternode::ManageStateRemote -- {}: {}\n", GetStateString(), strNotCapableReason);
             return;
         }
@@ -290,7 +290,7 @@ void CActiveMasternode::ManageStateRemote()
 #ifdef ENABLE_WALLET
 void CActiveMasternode::ManageStateLocal()
 {
-    LogPrint("masternode", "CActiveMasternode::ManageStateLocal -- status = %s, type = %s, pinger enabled = %d\n", GetStatus(), GetTypeString(), fPingerEnabled);
+    LOG_INFO("CActiveMasternode::ManageStateLocal -- status = %s, type = %s, pinger enabled = %d\n", GetStatus(), GetTypeString(), fPingerEnabled);
     if(nState == ACTIVE_MASTERNODE_STARTED) {
         return;
     }
@@ -301,7 +301,7 @@ void CActiveMasternode::ManageStateLocal()
         int nInputAge = GetInputAge(vin);
         if(nInputAge < Params().GetConsensus().nMasternodeMinimumConfirmations){
             nState = ACTIVE_MASTERNODE_INPUT_TOO_NEW;
-            strNotCapableReason = strprintf(_("%s - %d confirmations"), GetStatus(), nInputAge);
+            strNotCapableReason = fmt::format("%s - %d confirmations"), GetStatus(, nInputAge);
 			LOG_INFO("CActiveMasternode::ManageStateLocal -- {}: {}", GetStateString(), strNotCapableReason);
             return;
         }
@@ -327,7 +327,7 @@ void CActiveMasternode::ManageStateLocal()
         if(!mnodecenter.LoadLicense(mnb))
         {
             nState = ACTIVE_MASTERNODE_NOT_CAPABLE;
-            strNotCapableReason = strprintf(_("%s didn't registered on Ulord Center"), mnb.vin.prevout.ToStringShort());
+            strNotCapableReason = fmt::format("%s didn't registered on Ulord Center", mnb.vin.prevout.ToStringShort());
 			LOG_INFO("CMasternodeBroadcast::ManageStateLocal -- Didn't registered on Ulord Center, masternode={}", mnb.vin.prevout.ToStringShort());
             return;
         }

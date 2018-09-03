@@ -504,7 +504,7 @@ static bool rest_getutxos(HTTPRequest* req, const std::string& strURIPart)
 
     // limit max outpoints
     if (vOutPoints.size() > MAX_GETUTXOS_OUTPOINTS)
-        return RESTERR(req, HTTP_INTERNAL_SERVER_ERROR, strprintf("Error: max outpoints exceeded (max: %d, tried: %d)", MAX_GETUTXOS_OUTPOINTS, vOutPoints.size()));
+        return RESTERR(req, HTTP_INTERNAL_SERVER_ERROR, fmt::format("Error: max outpoints exceeded (max: %d, tried: %d)", MAX_GETUTXOS_OUTPOINTS, vOutPoints.size()));
 
     // check spentness and form a bitmap (as well as a JSON capable human-readable string representation)
     vector<unsigned char> bitmap;

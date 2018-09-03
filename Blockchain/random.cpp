@@ -4,12 +4,13 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "random.h"
+#include "Log.h"
 
 #include "support/cleanse.h"
 #ifdef WIN32
 #include "compat.h" // for Windows API
 #endif
-#include "util.h"             // for LogPrint()
+#include "util.h"
 #include "utilstrencodings.h" // for GetTime()
 
 #include <limits>
@@ -71,11 +72,11 @@ void RandAddSeedPerfmon()
     if (ret == ERROR_SUCCESS) {
         RAND_add(vData.data(), nSize, nSize / 100.0);
         memory_cleanse(vData.data(), nSize);
-        LogPrint("rand", "%s: %lu bytes\n", __func__, nSize);
+		LOG_INFO("%s: %lu bytes\n", __func__, nSize);
     } else {
         static bool warned = false; // Warn only once
         if (!warned) {
-            LogPrintf("%s: Warning: RegQueryValueExA(HKEY_PERFORMANCE_DATA) failed with code %i\n", __func__, ret);
+            LOG_INFO("%s: Warning: RegQueryValueExA(HKEY_PERFORMANCE_DATA) failed with code %i\n", __func__, ret);
             warned = true;
         }
     }
@@ -85,7 +86,7 @@ void RandAddSeedPerfmon()
 void GetRandBytes(unsigned char* buf, int num)
 {
     if (RAND_bytes(buf, num) != 1) {
-        LogPrintf("%s: OpenSSL RAND_bytes() failed with error: %s\n", __func__, ERR_error_string(ERR_get_error(), NULL));
+        LOG_INFO("%s: OpenSSL RAND_bytes() failed with error: %s\n", __func__, ERR_error_string(ERR_get_error(), NULL));
         assert(false);
     }
 }

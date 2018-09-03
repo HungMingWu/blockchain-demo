@@ -14,6 +14,7 @@
 #include "../sync.h"
 #include "../util.h"
 #include "../utiltime.h"
+#include "../Log.h"
 #include "wallet.h"
 
 #include <boost/filesystem.hpp>
@@ -386,13 +387,13 @@ ReadKeyValue(CWallet* pwallet, CDataStream& ssKey, CDataStream& ssValue,
                     char fTmp;
                     char fUnused;
                     ssValue >> fTmp >> fUnused >> wtx.strFromAccount;
-                    strErr = strprintf("LoadWallet() upgrading tx ver=%d %d '%s' %s",
+                    strErr = fmt::format("LoadWallet() upgrading tx ver=%d %d '%s' %s",
                                        wtx.fTimeReceivedIsTxTime, fTmp, wtx.strFromAccount, hash.ToString());
                     wtx.fTimeReceivedIsTxTime = fTmp;
                 }
                 else
                 {
-                    strErr = strprintf("LoadWallet() repairing tx ver=%d %s", wtx.fTimeReceivedIsTxTime, hash.ToString());
+                    strErr = fmt::format("LoadWallet() repairing tx ver=%d %s", wtx.fTimeReceivedIsTxTime, hash.ToString());
                     wtx.fTimeReceivedIsTxTime = 0;
                 }
                 wss.vWalletUpgrade.push_back(hash);
@@ -505,7 +506,7 @@ ReadKeyValue(CWallet* pwallet, CDataStream& ssKey, CDataStream& ssValue,
             ssValue >> kMasterKey;
             if(pwallet->mapMasterKeys.count(nID) != 0)
             {
-                strErr = strprintf("Error reading wallet database: duplicate CMasterKey id %u", nID);
+                strErr = fmt::format("Error reading wallet database: duplicate CMasterKey id %u", nID);
                 return false;
             }
             pwallet->mapMasterKeys[nID] = kMasterKey;
@@ -635,7 +636,7 @@ DBErrors CWalletDB::LoadWallet(CWallet* pwallet)
         Dbc* pcursor = GetCursor();
         if (!pcursor)
         {
-            LogPrintf("Error getting wallet database cursor\n");
+            LOG_INFO("Error getting wallet database cursor\n");
             return DB_CORRUPT;
         }
 
@@ -649,7 +650,7 @@ DBErrors CWalletDB::LoadWallet(CWallet* pwallet)
                 break;
             else if (ret != 0)
             {
-                LogPrintf("Error reading next record from wallet database\n");
+                LOG_INFO("Error reading next record from wallet database\n");
                 return DB_CORRUPT;
             }
 
@@ -671,13 +672,13 @@ DBErrors CWalletDB::LoadWallet(CWallet* pwallet)
                 }
             }
             if (!strErr.empty())
-                LogPrintf("%s\n", strErr);
+                LOG_INFO("%s\n", strErr);
         }
         pcursor->close();
 
         // Store initial pool size
         pwallet->nKeysLeftSinceAutoBackup = pwallet->GetKeyPoolSize();
-        LogPrintf("nKeysLeftSinceAutoBackup: %d\n", pwallet->nKeysLeftSinceAutoBackup);
+        LOG_INFO("nKeysLeftSinceAutoBackup: %d\n", pwallet->nKeysLeftSinceAutoBackup);
     }
     catch (const boost::thread_interrupted&) {
         throw;
@@ -694,9 +695,9 @@ DBErrors CWalletDB::LoadWallet(CWallet* pwallet)
     if (result != DB_LOAD_OK)
         return result;
 
-    LogPrintf("nFileVersion = %d\n", wss.nFileVersion);
+    LOG_INFO("nFileVersion = %d\n", wss.nFileVersion);
 
-    LogPrintf("Keys: %u plaintext, %u encrypted, %u w/ metadata, %u total\n",
+    LOG_INFO("Keys: %u plaintext, %u encrypted, %u w/ metadata, %u total\n",
            wss.nKeys, wss.nCKeys, wss.nKeyMeta, wss.nKeys + wss.nCKeys);
 
     // nTimeFirstKey is only reliable if all keys have metadata
@@ -748,7 +749,7 @@ DBErrors CWalletDB::FindWalletTx(CWallet* pwallet, vector<uint256>& vTxHash, vec
         Dbc* pcursor = GetCursor();
         if (!pcursor)
         {
-            LogPrintf("Error getting wallet database cursor\n");
+            LOG_INFO("Error getting wallet database cursor\n");
             return DB_CORRUPT;
         }
 
@@ -762,7 +763,7 @@ DBErrors CWalletDB::FindWalletTx(CWallet* pwallet, vector<uint256>& vTxHash, vec
                 break;
             else if (ret != 0)
             {
-                LogPrintf("Error reading next record from wallet database\n");
+                LOG_INFO("Error reading next record from wallet database\n");
                 return DB_CORRUPT;
             }
 
@@ -859,7 +860,7 @@ void ThreadFlushWalletDB(const string& strFile)
                     map<string, int>::iterator mi = bitdb.mapFileUseCount.find(strFile);
                     if (mi != bitdb.mapFileUseCount.end())
                     {
-                        LogPrint("db", "Flushing wallet.dat\n");
+                        LOG_INFO("Flushing wallet.dat\n");
                         nLastFlushed = nWalletDBUpdated;
                         int64_t nStart = GetTimeMillis();
 
@@ -868,7 +869,7 @@ void ThreadFlushWalletDB(const string& strFile)
                         bitdb.CheckpointLSN(strFile);
 
                         bitdb.mapFileUseCount.erase(mi++);
-                        LogPrint("db", "Flushed wallet.dat %dms\n", GetTimeMillis() - nStart);
+                        LOG_INFO("Flushed wallet.dat %dms\n", GetTimeMillis() - nStart);
                     }
                 }
             }
@@ -901,10 +902,10 @@ bool BackupWallet(const CWallet& wallet, const string& strDest)
 
                 try {
                     boost::filesystem::copy_file(pathSrc, pathDest, boost::filesystem::copy_option::overwrite_if_exists);
-                    LogPrintf("copied wallet.dat to %s\n", pathDest.string());
+                    LOG_INFO("copied wallet.dat to %s\n", pathDest.string());
                     return true;
                 } catch (const boost::filesystem::filesystem_error& e) {
-                    LogPrintf("error copying wallet.dat to %s - %s\n", pathDest.string(), e.what());
+                    LOG_INFO("error copying wallet.dat to %s - %s\n", pathDest.string(), e.what());
                     return false;
                 }
             }
@@ -930,11 +931,11 @@ bool AutoBackupWallet (CWallet* wallet, std::string strWalletFile, std::string& 
         if (!fs::exists(backupsDir))
         {
             // Always create backup folder to not confuse the operating system's file browser
-            LogPrintf("Creating backup folder %s\n", backupsDir.string());
+            LOG_INFO("Creating backup folder %s\n", backupsDir.string());
             if(!fs::create_directories(backupsDir)) {
                 // smth is wrong, we shouldn't continue until it's resolved
-                strBackupError = strprintf(_("Wasn't able to create wallet backup folder %s!"), backupsDir.string());
-                LogPrintf("%s\n", strBackupError);
+                strBackupError = fmt::format("Wasn't able to create wallet backup folder %s!", backupsDir.string());
+                LOG_INFO("%s\n", strBackupError);
                 nWalletBackups = -1;
                 return false;
             }
@@ -949,17 +950,17 @@ bool AutoBackupWallet (CWallet* wallet, std::string strWalletFile, std::string& 
             strWalletFile = wallet->strWalletFile;
             fs::path backupFile = backupsDir / (strWalletFile + dateTimeStr);
             if(!BackupWallet(*wallet, backupFile.string())) {
-                strBackupWarning = strprintf(_("Failed to create backup %s!"), backupFile.string());
-                LogPrintf("%s\n", strBackupWarning);
+                strBackupWarning = fmt::format("Failed to create backup %s!", backupFile.string());
+                LOG_INFO("%s\n", strBackupWarning);
                 nWalletBackups = -1;
                 return false;
             }
             // Update nKeysLeftSinceAutoBackup using current pool size
             wallet->nKeysLeftSinceAutoBackup = wallet->GetKeyPoolSize();
-            LogPrintf("nKeysLeftSinceAutoBackup: %d\n", wallet->nKeysLeftSinceAutoBackup);
+            LOG_INFO("nKeysLeftSinceAutoBackup: %d\n", wallet->nKeysLeftSinceAutoBackup);
             if(wallet->IsLocked(true)) {
-                strBackupWarning = _("Wallet is locked, can't replenish keypool! Automatic backups and mixing are disabled, please unlock your wallet to replenish keypool.");
-                LogPrintf("%s\n", strBackupWarning);
+                strBackupWarning = "Wallet is locked, can't replenish keypool! Automatic backups and mixing are disabled, please unlock your wallet to replenish keypool.";
+                LOG_INFO("%s\n", strBackupWarning);
                 nWalletBackups = -2;
                 return false;
             }
@@ -971,17 +972,17 @@ bool AutoBackupWallet (CWallet* wallet, std::string strWalletFile, std::string& 
             backupFile.make_preferred();
             if (fs::exists(backupFile))
             {
-                strBackupWarning = _("Failed to create backup, file already exists! This could happen if you restarted wallet in less than 60 seconds. You can continue if you are ok with this.");
-                LogPrintf("%s\n", strBackupWarning);
+                strBackupWarning = "Failed to create backup, file already exists! This could happen if you restarted wallet in less than 60 seconds. You can continue if you are ok with this.";
+                LOG_INFO("%s\n", strBackupWarning);
                 return false;
             }
             if(fs::exists(sourceFile)) {
                 try {
                     fs::copy_file(sourceFile, backupFile);
-                    LogPrintf("Creating backup of %s -> %s\n", sourceFile.string(), backupFile.string());
+                    LOG_INFO("Creating backup of %s -> %s\n", sourceFile.string(), backupFile.string());
                 } catch(fs::filesystem_error &error) {
-                    strBackupWarning = strprintf(_("Failed to create backup, error: %s"), error.what());
-                    LogPrintf("%s\n", strBackupWarning);
+                    strBackupWarning = fmt::format("Failed to create backup, error: %s", error.what());
+                    LOG_INFO("%s\n", strBackupWarning);
                     nWalletBackups = -1;
                     return false;
                 }
@@ -1019,10 +1020,10 @@ bool AutoBackupWallet (CWallet* wallet, std::string strWalletFile, std::string& 
                 // More than nWalletBackups backups: delete oldest one(s)
                 try {
                     fs::remove(file.second);
-                    LogPrintf("Old backup deleted: %s\n", file.second);
+                    LOG_INFO("Old backup deleted: %s\n", file.second.string());
                 } catch(fs::filesystem_error &error) {
-                    strBackupWarning = strprintf(_("Failed to delete backup, error: %s"), error.what());
-                    LogPrintf("%s\n", strBackupWarning);
+                    strBackupWarning = fmt::format("Failed to delete backup, error: %s", error.what());
+                    LOG_INFO("%s\n", strBackupWarning);
                     return false;
                 }
             }
@@ -1030,7 +1031,7 @@ bool AutoBackupWallet (CWallet* wallet, std::string strWalletFile, std::string& 
         return true;
     }
 
-    LogPrintf("Automatic wallet backups are disabled!\n");
+    LOG_INFO("Automatic wallet backups are disabled!\n");
     return false;
 }
 
@@ -1048,15 +1049,15 @@ bool CWalletDB::Recover(CDBEnv& dbenv, const std::string& filename, bool fOnlyKe
     // Set -rescan so any missing transactions will be
     // found.
     int64_t now = GetTime();
-    std::string newFilename = strprintf("wallet.%d.bak", now);
+    std::string newFilename = fmt::format("wallet.%d.bak", now);
 
     int result = dbenv.dbenv->dbrename(NULL, filename.c_str(), NULL,
                                        newFilename.c_str(), DB_AUTO_COMMIT);
     if (result == 0)
-        LogPrintf("Renamed %s to %s\n", filename, newFilename);
+        LOG_INFO("Renamed %s to %s\n", filename, newFilename);
     else
     {
-        LogPrintf("Failed to rename %s to %s\n", filename, newFilename);
+        LOG_INFO("Failed to rename %s to %s\n", filename, newFilename);
         return false;
     }
 
@@ -1064,10 +1065,10 @@ bool CWalletDB::Recover(CDBEnv& dbenv, const std::string& filename, bool fOnlyKe
     bool fSuccess = dbenv.Salvage(newFilename, true, salvagedData);
     if (salvagedData.empty())
     {
-        LogPrintf("Salvage(aggressive) found no records in %s.\n", newFilename);
+        LOG_INFO("Salvage(aggressive) found no records in %s.\n", newFilename);
         return false;
     }
-    LogPrintf("Salvage(aggressive) found %u records\n", salvagedData.size());
+    LOG_INFO("Salvage(aggressive) found %u records\n", salvagedData.size());
 
     std::unique_ptr<Db> pdbCopy(new Db(dbenv.dbenv, 0));
     int ret = pdbCopy->open(NULL,               // Txn pointer
@@ -1078,7 +1079,7 @@ bool CWalletDB::Recover(CDBEnv& dbenv, const std::string& filename, bool fOnlyKe
                             0);
     if (ret > 0)
     {
-        LogPrintf("Cannot create database file %s\n", filename);
+        LOG_INFO("Cannot create database file %s\n", filename);
         return false;
     }
     CWallet dummyWallet;
@@ -1103,7 +1104,7 @@ bool CWalletDB::Recover(CDBEnv& dbenv, const std::string& filename, bool fOnlyKe
                 continue;
             if (!fReadOK)
             {
-                LogPrintf("WARNING: CWalletDB::Recover skipping %s: %s\n", strType, strErr);
+                LOG_INFO("WARNING: CWalletDB::Recover skipping %s: %s\n", strType, strErr);
                 continue;
             }
         }

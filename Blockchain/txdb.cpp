@@ -71,7 +71,7 @@ bool CCoinsViewDB::BatchWrite(CCoinsMap &mapCoins, const uint256 &hashBlock) {
     if (!hashBlock.IsNull())
         batch.Write(DB_BEST_BLOCK, hashBlock);
 
-    LogPrint("coindb", "Committing %u changed transactions (out of %u) to coin database...\n", (unsigned int)changed, (unsigned int)count);
+    LOG_INFO("Committing %u changed transactions (out of %u) to coin database...\n", (unsigned int)changed, (unsigned int)count);
     return db.WriteBatch(batch);
 }
 
@@ -128,7 +128,8 @@ bool CCoinsViewDB::GetStats(CCoinsStats &stats) const {
                 stats.nSerializedSize += 32 + pcursor->GetValueSize();
                 ss << VARINT(0);
             } else {
-                return error("CCoinsViewDB::GetStats() : unable to read value");
+				LOG_ERROR("CCoinsViewDB::GetStats() : unable to read value");
+				return false;
             }
         } else {
             break;
@@ -211,7 +212,8 @@ bool CBlockTreeDB::ReadAddressUnspentIndex(uint160 addressHash, int type,
                 unspentOutputs.push_back(make_pair(key.second, nValue));
                 pcursor->Next();
             } else {
-                return error("failed to get address unspent value");
+				LOG_ERROR("failed to get address unspent value");
+				return false;
             }
         } else {
             break;
@@ -259,7 +261,8 @@ bool CBlockTreeDB::ReadAddressIndex(uint160 addressHash, int type,
                 addressIndex.push_back(make_pair(key.second, nValue));
                 pcursor->Next();
             } else {
-                return error("failed to get address index value");
+				LOG_ERROR("failed to get address index value");
+				return false;
             }
         } else {
             break;
@@ -342,7 +345,8 @@ bool CBlockTreeDB::LoadBlockIndexGuts()
 #endif
                 pcursor->Next();
             } else {
-                return error("LoadBlockIndex() : failed to read value");
+				LOG_ERROR("LoadBlockIndex() : failed to read value");
+				return false;
             }
         } else {
             break;

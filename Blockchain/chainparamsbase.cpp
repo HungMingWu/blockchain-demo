@@ -3,12 +3,11 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "chainparamsbase.h"
-
-#include "tinyformat.h"
-#include "util.h"
-
 #include <assert.h>
+#include <spdlog/fmt/fmt.h>
+
+#include "chainparamsbase.h"
+#include "util.h"
 
 const std::string CBaseChainParams::MAIN = "main";
 const std::string CBaseChainParams::TESTNET = "test";
@@ -16,8 +15,8 @@ const std::string CBaseChainParams::REGTEST = "regtest";
 
 void AppendParamsHelpMessages(std::string& strUsage, bool debugHelp)
 {
-    strUsage += HelpMessageGroup(_("Chain selection options:"));
-    strUsage += HelpMessageOpt("-testnet", _("Use the test chain"));
+    strUsage += HelpMessageGroup("Chain selection options:");
+    strUsage += HelpMessageOpt("-testnet", "Use the test chain");
     if (debugHelp) {
         strUsage += HelpMessageOpt("-regtest", "Enter regression test mode, which uses a special chain in which blocks can be solved instantly. "
                                    "This is intended for regression testing tools and app development.");
@@ -82,7 +81,7 @@ CBaseChainParams& BaseParams(const std::string& chain)
     else if (chain == CBaseChainParams::REGTEST)
         return regTestParams;
     else
-        throw std::runtime_error(strprintf("%s: Unknown chain %s.", __func__, chain));
+        throw std::runtime_error(fmt::format("%s: Unknown chain %s.", __func__, chain));
 }
 
 void SelectBaseParams(const std::string& chain)

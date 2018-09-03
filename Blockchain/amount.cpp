@@ -3,9 +3,8 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#include <spdlog/fmt/fmt.h>
 #include "amount.h"
-
-#include "tinyformat.h"
 
 const std::string CURRENCY_UNIT = "UT";
 
@@ -29,5 +28,5 @@ CAmount CFeeRate::GetFee(size_t nSize) const
 
 std::string CFeeRate::ToString() const
 {
-    return strprintf("%d.%08d %s/kB", nSatoshisPerK / COIN, nSatoshisPerK % COIN, CURRENCY_UNIT);
+    return fmt::format("%d.%08d %s/kB", nSatoshisPerK / COIN, nSatoshisPerK % COIN, CURRENCY_UNIT);
 }

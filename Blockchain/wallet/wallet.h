@@ -8,18 +8,6 @@
 #ifndef ULORD_WALLET_H
 #define ULORD_WALLET_H
 
-#include "../amount.h"
-#include "../base58.h"
-#include "../streams.h"
-#include "../tinyformat.h"
-#include "../ui_interface.h"
-#include "../util.h"
-#include "../utilstrencodings.h"
-#include "../validationinterface.h"
-#include "crypter.h"
-#include "wallet_ismine.h"
-#include "walletdb.h"
-
 #include <algorithm>
 #include <map>
 #include <set>
@@ -28,8 +16,19 @@
 #include <string>
 #include <utility>
 #include <vector>
-
 #include <boost/shared_ptr.hpp>
+#include <spdlog/fmt/fmt.h>
+
+#include "../amount.h"
+#include "../base58.h"
+#include "../streams.h"
+#include "../ui_interface.h"
+#include "../util.h"
+#include "../utilstrencodings.h"
+#include "../validationinterface.h"
+#include "crypter.h"
+#include "wallet_ismine.h"
+#include "walletdb.h"
 
 /**
  * Settings
@@ -361,7 +360,7 @@ public:
             WriteOrderPos(nOrderPos, mapValue);
 
             if (nTimeSmart)
-                mapValue["timesmart"] = strprintf("%u", nTimeSmart);
+                mapValue["timesmart"] = fmt::format("%u", nTimeSmart);
         }
 
         READWRITE(*(CMerkleTx*)this);

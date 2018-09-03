@@ -30,7 +30,6 @@
 CClientUIInterface uiInterface; // Declared but not defined in ui_interface.h
 CWallet* pwalletMain;
 
-extern bool fPrintToConsole;
 //extern void noui_connect();
 
 BasicTestingSetup::BasicTestingSetup(const std::string& chainName)
@@ -38,7 +37,6 @@ BasicTestingSetup::BasicTestingSetup(const std::string& chainName)
 	ECC_Start();
 	SetupEnvironment();
 	SetupNetworking();
-	fPrintToDebugLog = false; // don't want to write to debug.log file
 	fCheckBlockIndex = true;
 	SelectParams(chainName);
 //	noui_connect();
@@ -56,7 +54,7 @@ TestingSetup::TestingSetup(const std::string& chainName) : BasicTestingSetup(cha
 	bitdb.MakeMock();
 #endif
 	ClearDatadirCache();
-	pathTemp = GetTempPath() / strprintf("test_ulord_%lu_%i", (unsigned long)GetTime(), (int)(GetRand(100000)));
+	pathTemp = GetTempPath() / fmt::format("test_ulord_%lu_%i", (unsigned long)GetTime(), (int)(GetRand(100000)));
 	boost::filesystem::create_directories(pathTemp);
 	mapArgs["-datadir"] = pathTemp.string();
 	pblocktree = std::make_unique<CBlockTreeDB>(1 << 20, true);

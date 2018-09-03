@@ -5,6 +5,7 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#include <spdlog/fmt/fmt.h>
 #include "claimtrie.h"
 #include "rpcserver.h"
 
@@ -15,6 +16,7 @@
 #include "ui_interface.h"
 #include "util.h"
 #include "utilstrencodings.h"
+#include "Log.h"
 
 #include <boost/filesystem.hpp>
 #include <boost/iostreams/concepts.hpp>
@@ -84,7 +86,7 @@ void RPCTypeCheck(const UniValue& params,
         const UniValue& v = params[i];
         if (!((v.type() == t) || (fAllowNull && (v.isNull()))))
         {
-            string err = strprintf("Expected type %s, got %s",
+            string err = fmt::format("Expected type %s, got %s",
                                    uvTypeName(t), uvTypeName(v.type()));
             throw JSONRPCError(RPC_TYPE_ERROR, err);
         }
@@ -100,11 +102,11 @@ void RPCTypeCheckObj(const UniValue& o,
     {
         const UniValue& v = find_value(o, t.first);
         if (!fAllowNull && v.isNull())
-            throw JSONRPCError(RPC_TYPE_ERROR, strprintf("Missing %s", t.first));
+            throw JSONRPCError(RPC_TYPE_ERROR, fmt::format("Missing %s", t.first));
 
         if (!((v.type() == t.second) || (fAllowNull && (v.isNull()))))
         {
-            string err = strprintf("Expected type %s for %s, got %s",
+            string err = fmt::format("Expected type %s for %s, got %s",
                                    uvTypeName(t.second), t.first, uvTypeName(v.type()));
             throw JSONRPCError(RPC_TYPE_ERROR, err);
         }
@@ -133,7 +135,7 @@ UniValue ValueFromAmount(const CAmount& amount)
     int64_t quotient = n_abs / COIN;
     int64_t remainder = n_abs % COIN;
     return UniValue(UniValue::VNUM,
-            strprintf("%s%d.%08d", sign ? "-" : "", quotient, remainder));
+            fmt::format("%s%d.%08d", sign ? "-" : "", quotient, remainder));
 }
 
 uint256 ParseHashV(const UniValue& v, string strName)
@@ -220,7 +222,7 @@ std::string CRPCTable::help(const std::string& strCommand) const
         }
     }
     if (strRet == "")
-        strRet = strprintf("help: unknown command: %s\n", strCommand);
+        strRet = fmt::format("help: unknown command: %s\n", strCommand);
     strRet = strRet.substr(0,strRet.size()-1);
     return strRet;
 }
@@ -473,7 +475,7 @@ const CRPCCommand *CRPCTable::operator[](const std::string &name) const
 
 bool StartRPC()
 {
-    LogPrint("rpc", "Starting RPC\n");
+    LOG_INFO("Starting RPC\n");
     fRPCRunning = true;
     g_rpcSignals.Started();
     return true;
@@ -481,14 +483,14 @@ bool StartRPC()
 
 void InterruptRPC()
 {
-    LogPrint("rpc", "Interrupting RPC\n");
+    LOG_INFO("Interrupting RPC\n");
     // Interrupt e.g. running longpolls
     fRPCRunning = false;
 }
 
 void StopRPC()
 {
-    LogPrint("rpc", "Stopping RPC\n");
+    LOG_INFO("Stopping RPC\n");
     deadlineTimers.clear();
     g_rpcSignals.Stopped();
 }
@@ -538,7 +540,7 @@ void JSONRequest::parse(const UniValue& valRequest)
         throw JSONRPCError(RPC_INVALID_REQUEST, "Method must be a string");
     strMethod = valMethod.get_str();
     if (strMethod != "getblocktemplate")
-        LogPrint("rpc", "ThreadRPCServer method=%s\n", SanitizeString(strMethod));
+        LOG_INFO("ThreadRPCServer method=%s\n", SanitizeString(strMethod));
 
     // Parse params
     UniValue valParams = find_value(request, "params");
@@ -653,7 +655,7 @@ void RPCRunLater(const std::string& name, std::function<void(void)> func, int64_
 #endif
     deadlineTimers.erase(name);
     RPCTimerInterface* timerInterface = timerInterfaces.back();
-    LogPrint("rpc", "queue run of timer %s in %i seconds (using %s)\n", name, nSeconds, timerInterface->Name());
+    LOG_INFO("queue run of timer %s in %i seconds (using %s)\n", name, nSeconds, timerInterface->Name());
     deadlineTimers.insert(std::make_pair(name, boost::shared_ptr<RPCTimerBase>(timerInterface->NewTimer(func, nSeconds*1000))));
 }
 

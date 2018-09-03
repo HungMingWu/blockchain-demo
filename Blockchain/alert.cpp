@@ -12,6 +12,7 @@
 #include "ui_interface.h"
 #include "util.h"
 #include "utilstrencodings.h"
+#include "Log.h"
 
 #include <stdint.h>
 #include <algorithm>
@@ -48,11 +49,11 @@ std::string CUnsignedAlert::ToString() const
 {
     std::string strSetCancel;
     for (int n : setCancel)
-        strSetCancel += strprintf("%d ", n);
+        strSetCancel += fmt::format("%d ", n);
     std::string strSetSubVer;
     for (const std::string& str : setSubVer)
         strSetSubVer += "\"" + str + "\" ";
-    return strprintf(
+    return fmt::format(
         "CAlert(\n"
         "    nVersion     = %d\n"
         "    nRelayUntil  = %d\n"
@@ -138,7 +139,7 @@ bool CAlert::RelayTo(CNode* pnode) const
             GetAdjustedTime() < nRelayUntil)
         {
             pnode->PushMessage(NetMsgType::ALERT, *this);
-			LogPrint("alert", "alert %d send to Node %s\n", nID, pnode->addr.ToString());
+			LOG_INFO("alert %d send to Node %s\n", nID, pnode->addr.ToString());
             return true;
         }
     }
@@ -148,8 +149,10 @@ bool CAlert::RelayTo(CNode* pnode) const
 bool CAlert::CheckSignature(const std::vector<unsigned char>& alertKey) const
 {
     CPubKey key(alertKey);
-    if (!key.Verify(Hash(vchMsg.begin(), vchMsg.end()), vchSig))
-        return error("CAlert::CheckSignature(): verify signature failed");
+	if (!key.Verify(Hash(vchMsg.begin(), vchMsg.end()), vchSig)) {
+		LOG_ERROR("CAlert::CheckSignature(): verify signature failed");
+		return false;
+	}
 
     // Now unserialize the data
     CDataStream sMsg(vchMsg, SER_NETWORK, PROTOCOL_VERSION);
@@ -206,13 +209,13 @@ bool CAlert::ProcessAlert(const std::vector<unsigned char>& alertKey, bool fThre
             const CAlert& alert = (*mi).second;
             if (Cancels(alert))
             {
-                LogPrint("alert", "cancelling alert %d\n", alert.nID);
+                LOG_INFO("cancelling alert %d\n", alert.nID);
                 uiInterface.NotifyAlertChanged((*mi).first, CT_DELETED);
                 mapAlerts.erase(mi++);
             }
             else if (!alert.IsInEffect())
             {
-                LogPrint("alert", "expiring alert %d\n", alert.nID);
+                LOG_INFO("expiring alert %d\n", alert.nID);
                 uiInterface.NotifyAlertChanged((*mi).first, CT_DELETED);
                 mapAlerts.erase(mi++);
             }
@@ -226,7 +229,7 @@ bool CAlert::ProcessAlert(const std::vector<unsigned char>& alertKey, bool fThre
             const CAlert& alert = item.second;
             if (alert.Cancels(*this))
             {
-                LogPrint("alert", "alert %d already cancelled by %d\n",nID, alert.nID);
+                LOG_INFO("alert %d already cancelled by %d\n",nID, alert.nID);
                 return false;
             }
         }
@@ -241,7 +244,7 @@ bool CAlert::ProcessAlert(const std::vector<unsigned char>& alertKey, bool fThre
         }
     }
 
-    LogPrint("alert", "accepted alert %d, AppliesToMe()=%d\n", nID, AppliesToMe());
+    LOG_INFO("accepted alert %d, AppliesToMe()=%d\n", nID, AppliesToMe());
     return true;
 }
 

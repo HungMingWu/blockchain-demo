@@ -96,7 +96,7 @@ CryptoHello& CryptoHello::write(uchar *data, size_t len)
 {
 	in += std::string(data, data + len);
 #ifdef KDBUG
-	LogPrintf("serialized:\t%s\n", HexStr(in).c_str());
+	LOG_INFO("serialized:\t%s\n", HexStr(in).c_str());
 #endif
 	return *this;
 }
