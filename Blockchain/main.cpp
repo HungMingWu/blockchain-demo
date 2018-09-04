@@ -43,7 +43,6 @@
 #include "script/standard.h"
 #include "txdb.h"
 #include "txmempool.h"
-#include "ui_interface.h"
 #include "undo.h"
 #include "util.h"
 #include "spork.h"
@@ -2349,9 +2348,6 @@ bool AbortNode(const std::string& strMessage, const std::string& userMessage="")
 {
     strMiscWarning = strMessage;
     LOG_INFO("*** %s\n", strMessage);
-    uiInterface.ThreadSafeMessageBox(
-        userMessage.empty() ? "Error: A fatal internal error occurred, see debug.log for details" : userMessage,
-        "", CClientUIInterface::MSG_ERROR);
     StartShutdown();
     return false;
 }
@@ -3932,7 +3928,6 @@ bool ActivateBestChain(CValidationState &state, const CChainParams& chainparams,
         // Notifications/callbacks that can run without cs_main
         // Always notify the UI if a new block tip was connected
         if (pindexFork != pindexNewTip) {
-            uiInterface.NotifyBlockTip(fInitialDownload, pindexNewTip);
 
             if (!fInitialDownload) {
                 // Find the hashes of all blocks that weren't previously in the best chain.
@@ -4996,12 +4991,10 @@ bool static LoadBlockIndexDB()
 
 CVerifyDB::CVerifyDB()
 {
-    uiInterface.ShowProgress("Verifying blocks...", 0);
 }
 
 CVerifyDB::~CVerifyDB()
 {
-    uiInterface.ShowProgress("", 100);
 }
 
 bool CVerifyDB::VerifyDB(const CChainParams& chainparams, CCoinsView *coinsview, int nCheckLevel, int nCheckDepth)
@@ -5026,7 +5019,6 @@ bool CVerifyDB::VerifyDB(const CChainParams& chainparams, CCoinsView *coinsview,
     for (CBlockIndex* pindex = chainActive.Tip(); pindex && pindex->pprev; pindex = pindex->pprev)
     {
         boost::this_thread::interruption_point();
-        uiInterface.ShowProgress("Verifying blocks...", std::max(1, std::min(99, (int)(((double)(chainActive.Height() - pindex->nHeight)) / (double)nCheckDepth * (nCheckLevel >= 4 ? 50 : 100)))));
         if (pindex->nHeight < chainActive.Height()-nCheckDepth)
             break;
         // check level 0: read from disk
@@ -5077,8 +5069,7 @@ bool CVerifyDB::VerifyDB(const CChainParams& chainparams, CCoinsView *coinsview,
     if (nCheckLevel >= 4) {
         CBlockIndex *pindex = pindexState;
         while (pindex != chainActive.Tip()) {
-            boost::this_thread::interruption_point();
-            uiInterface.ShowProgress("Verifying blocks...", std::max(1, std::min(99, 100 - (int)(((double)(chainActive.Height() - pindex->nHeight)) / (double)nCheckDepth * 50))));
+			boost::this_thread::interruption_point();
             pindex = chainActive.Next(pindex);
             Opt<CBlock> block = ReadBlockFromDisk(*pindex, chainparams.GetConsensus());
 			if (!block) {

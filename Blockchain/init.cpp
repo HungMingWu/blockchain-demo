@@ -35,7 +35,6 @@
 #include "txdb.h"
 #include "txmempool.h"
 #include "torcontrol.h"
-#include "ui_interface.h"
 #include "util.h"
 #include "utilmoneystr.h"
 #include "utilstrencodings.h"
@@ -120,7 +119,6 @@ enum BindFlags {
 };
 
 static const char* FEE_ESTIMATES_FILENAME="fee_estimates.dat";
-CClientUIInterface uiInterface; // Declared but not defined in ui_interface.h
 
 //////////////////////////////////////////////////////////////////////////////
 //
@@ -171,7 +169,6 @@ public:
         try {
             return CCoinsViewBacked::GetCoins(txid);
         } catch(const std::runtime_error& e) {
-            uiInterface.ThreadSafeMessageBox(fmt::format("Error reading from database, shutting down."), "", CClientUIInterface::MSG_ERROR);
             LOG_INFO("Error reading from database: %s\n", e.what());
             // Starting the shutdown sequence and returning false to the caller would be
             // interpreted as 'entry not found' (as opposed to unable to read data), and
@@ -189,10 +186,7 @@ static std::unique_ptr<ECCVerifyHandle> globalVerifyHandle;
 
 void Interrupt(boost::thread_group& threadGroup)
 {
-    InterruptHTTPServer();
     InterruptHTTPRPC();
-    InterruptRPC();
-    InterruptREST();
     InterruptTorControl();
     threadGroup.interrupt_all();
 }
@@ -215,7 +209,6 @@ void PrepareShutdown()
     RenameThread("ulord-shutoff");
     mempool.AddTransactionsUpdated(1);
     StopHTTPRPC();
-    StopREST();
     StopRPC();
     StopHTTPServer();
 #ifdef ENABLE_WALLET
@@ -329,13 +322,11 @@ void HandleSIGHUP(int)
 
 bool static InitError(const std::string &str)
 {
-    uiInterface.ThreadSafeMessageBox(str, "", CClientUIInterface::MSG_ERROR);
     return false;
 }
 
 bool static InitWarning(const std::string &str)
 {
-    uiInterface.ThreadSafeMessageBox(str, "", CClientUIInterface::MSG_WARNING);
     return true;
 }
 
@@ -762,8 +753,6 @@ bool InitSanityCheck(void)
 
 bool AppInitServers(boost::thread_group& threadGroup)
 {
-    RPCServer::OnStopped(&OnRPCStopped);
-    RPCServer::OnPreCommand(&OnRPCPreCommand);
     if (!InitHTTPServer())
         return false;
     if (!StartRPC())
@@ -1211,17 +1200,6 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
 #ifdef ENABLE_ADDRSTAT
 	MyAddrDb_init();
 #endif //ENABLE_ADDRSTAT
-    /* Start the RPC server already.  It will be started in "warmup" mode
-     * and not really process calls already (but it will signify connections
-     * that the server is there and will be ready later).  Warmup mode will
-     * be disabled when initialisation is finished.
-     */
-    if (fServer)
-    {
-        uiInterface.InitMessage.connect(SetRPCWarmupStatus);
-        if (!AppInitServers(threadGroup))
-            return InitError(fmt::format("Unable to start HTTP server. See debug log for details."));
-    }
 
     int64_t nStart;
 
@@ -1448,8 +1426,6 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
         bool fReset = fReindex;
         std::string strLoadError;
 
-        uiInterface.InitMessage(fmt::format("Loading block index..."));
-
         nStart = GetTimeMillis();
         do {
             try {
@@ -1502,7 +1478,6 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
                     break;
                 }
 
-                uiInterface.InitMessage(fmt::format("Verifying blocks..."));
                 if (fHavePruned && GetArg("-checkblocks", DEFAULT_CHECKBLOCKS) > MIN_BLOCKS_TO_KEEP) {
                     LOG_INFO("Prune: pruned datadir may not have more than %d blocks; -checkblocks=%d may fail\n",
                         MIN_BLOCKS_TO_KEEP, GetArg("-checkblocks", DEFAULT_CHECKBLOCKS));
@@ -1536,16 +1511,8 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
         if (!fLoaded) {
             // first suggest a reindex
             if (!fReset) {
-                bool fRet = uiInterface.ThreadSafeMessageBox(
-                    strLoadError + ".\n\n" + fmt::format("Do you want to rebuild the block database now?"),
-                    "", CClientUIInterface::MSG_ERROR | CClientUIInterface::BTN_ABORT);
-                if (fRet) {
-                    fReindex = true;
-                    fRequestShutdown = false;
-                } else {
-                    LOG_INFO("Aborted block database rebuild. Exiting.\n");
-                    return false;
-                }
+				fReindex = true;
+				fRequestShutdown = false;
             } else {
                 return InitError(strLoadError);
             }
@@ -1741,18 +1708,12 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
         LOG_INFO("Unsetting NODE_NETWORK on prune mode\n");
         nLocalServices &= ~NODE_NETWORK;
         if (!fReindex) {
-            uiInterface.InitMessage(fmt::format("Pruning blockstore..."));
             PruneAndFlush();
         }
     }
 
     // ********************************************************* Step 10: import blocks
-
-    if (mapArgs.count("-blocknotify"))
-        uiInterface.NotifyBlockTip.connect(BlockNotifyCallback);
-
     
-    uiInterface.InitMessage(fmt::format(std::string("Activating " + Params().NetworkIDString() + " chain...").c_str()));
     // scan for better chains in the block chain database, that are not yet connected in the active best chain
     CValidationState state;
     if (!ActivateBestChain(state, chainparams))
@@ -1863,30 +1824,24 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
 
     // LOAD SERIALIZED DAT FILES INTO DATA CACHES FOR INTERNAL USE
 
-    uiInterface.InitMessage(fmt::format("Loading masternode cache..."));
     CFlatDB<CMasternodeMan> flatdb1("mncache.dat", "magicMasternodeCache");
     if(!flatdb1.Load(mnodeman)) {
         return InitError("Failed to load masternode cache from mncache.dat");
     }
 
     if(mnodeman.size()) {
-        uiInterface.InitMessage(fmt::format("Loading masternode payment cache..."));
         CFlatDB<CMasternodePayments> flatdb2("mnpayments.dat", "magicMasternodePaymentsCache");
         if(!flatdb2.Load(mnpayments)) {
             return InitError("Failed to load masternode payments cache from mnpayments.dat");
         }
 
-        uiInterface.InitMessage(fmt::format("Loading governance cache..."));
         CFlatDB<CGovernanceManager> flatdb3("governance.dat", "magicGovernanceCache");
         if(!flatdb3.Load(governance)) {
             return InitError("Failed to load governance cache from governance.dat");
         }
         governance.InitOnLoad();
-    } else {
-        uiInterface.InitMessage(fmt::format("Masternode cache is empty, skipping payments and governance cache..."));
     }
 
-    uiInterface.InitMessage(fmt::format("Loading fullfiled requests cache..."));
     CFlatDB<CNetFulfilledRequestManager> flatdb4("netfulfilled.dat", "magicFulfilledCache");
     if(!flatdb4.Load(netfulfilledman)) {
         return InitError("Failed to load fulfilled requests cache from netfulfilled.dat");
@@ -1948,9 +1903,6 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
     GenerateBitcoins(GetBoolArg("-gen", DEFAULT_GENERATE), GetArg("-genproclimit", DEFAULT_GENERATE_THREADS), chainparams);
 
     // ********************************************************* Step 13: finished
-
-    SetRPCWarmupFinished();
-    uiInterface.InitMessage(fmt::format("Done loading"));
 
 #ifdef ENABLE_WALLET
     if (pwalletMain) {

@@ -13,7 +13,6 @@
 #include "init.h"
 #include "random.h"
 #include "sync.h"
-#include "ui_interface.h"
 #include "util.h"
 #include "utilstrencodings.h"
 #include "Log.h"
@@ -21,56 +20,17 @@
 #include <boost/filesystem.hpp>
 #include <boost/iostreams/concepts.hpp>
 #include <boost/iostreams/stream.hpp>
-#include <boost/shared_ptr.hpp>
 #include <boost/signals2/signal.hpp>
 #include <boost/thread.hpp>
 #include <boost/algorithm/string/case_conv.hpp> // for to_upper()
 
-using namespace RPCServer;
 using namespace std;
 
-static bool fRPCRunning = false;
-static bool fRPCInWarmup = true;
-static std::string rpcWarmupStatus("RPC server started");
-static CCriticalSection cs_rpcWarmup;
 /* Timer-creating functions */
 static std::vector<RPCTimerInterface*> timerInterfaces;
 /* Map of name to timer.
  * @note Can be changed to std::unique_ptr when C++11 */
-static std::map<std::string, boost::shared_ptr<RPCTimerBase> > deadlineTimers;
-
-static struct CRPCSignals
-{
-    boost::signals2::signal<void ()> Started;
-    boost::signals2::signal<void ()> Stopped;
-    boost::signals2::signal<void (const CRPCCommand&)> PreCommand;
-    boost::signals2::signal<void (const CRPCCommand&)> PostCommand;
-} g_rpcSignals;
-
-void RPCServer::OnStarted(std::function<void ()> slot)
-{
-    g_rpcSignals.Started.connect(slot);
-}
-
-void RPCServer::OnStopped(std::function<void ()> slot)
-{
-    g_rpcSignals.Stopped.connect(slot);
-}
-
-void RPCServer::OnPreCommand(std::function<void (const CRPCCommand&)> slot)
-{
-    g_rpcSignals.PreCommand.connect([=](auto&&... params) {
-        return slot(std::forward<decltype(params)>(params)...);
-    });
-}
-
-void RPCServer::OnPostCommand(std::function<void (const CRPCCommand&)> slot)
-{
-    g_rpcSignals.PostCommand.connect([=](auto&&... params) {
-        return slot(std::forward<decltype(params)>(params)...);
-    });
-
-}
+static std::map<std::string, std::shared_ptr<RPCTimerBase> > deadlineTimers;
 
 #if 0
 void RPCTypeCheck(const UniValue& params,
@@ -476,49 +436,13 @@ const CRPCCommand *CRPCTable::operator[](const std::string &name) const
 bool StartRPC()
 {
     LOG_INFO("Starting RPC\n");
-    fRPCRunning = true;
-    g_rpcSignals.Started();
     return true;
-}
-
-void InterruptRPC()
-{
-    LOG_INFO("Interrupting RPC\n");
-    // Interrupt e.g. running longpolls
-    fRPCRunning = false;
 }
 
 void StopRPC()
 {
     LOG_INFO("Stopping RPC\n");
     deadlineTimers.clear();
-    g_rpcSignals.Stopped();
-}
-
-bool IsRPCRunning()
-{
-    return fRPCRunning;
-}
-
-void SetRPCWarmupStatus(const std::string& newStatus)
-{
-    LOCK(cs_rpcWarmup);
-    rpcWarmupStatus = newStatus;
-}
-
-void SetRPCWarmupFinished()
-{
-    LOCK(cs_rpcWarmup);
-    assert(fRPCInWarmup);
-    fRPCInWarmup = false;
-}
-
-bool RPCIsInWarmup(std::string *outStatus)
-{
-    LOCK(cs_rpcWarmup);
-    if (outStatus)
-        *outStatus = rpcWarmupStatus;
-    return fRPCInWarmup;
 }
 
 #if 0
@@ -656,7 +580,7 @@ void RPCRunLater(const std::string& name, std::function<void(void)> func, int64_
     deadlineTimers.erase(name);
     RPCTimerInterface* timerInterface = timerInterfaces.back();
     LOG_INFO("queue run of timer %s in %i seconds (using %s)\n", name, nSeconds, timerInterface->Name());
-    deadlineTimers.insert(std::make_pair(name, boost::shared_ptr<RPCTimerBase>(timerInterface->NewTimer(func, nSeconds*1000))));
+    deadlineTimers.insert(std::make_pair(name, std::shared_ptr<RPCTimerBase>(timerInterface->NewTimer(func, nSeconds*1000))));
 }
 
 const CRPCTable tableRPC;

@@ -9,7 +9,6 @@
 #include "sync.h"
 #include "util.h"
 #include "utilstrencodings.h"
-#include "ui_interface.h"
 #include "crypto/hmac_sha256.h"
 #include <stdio.h>
 #include "utilstrencodings.h"
@@ -212,9 +211,6 @@ static bool InitRPCAuthentication()
     {
         LOG_INFO("No rpcpassword set - using random cookie authentication\n");
         if (!GenerateAuthCookie(&strRPCUserColonPass)) {
-            uiInterface.ThreadSafeMessageBox(
-                "Error: A fatal internal error occurred, see debug.log for details", // Same message as AbortNode
-                "", CClientUIInterface::MSG_ERROR);
             return false;
         }
     } else {
@@ -248,7 +244,6 @@ void InterruptHTTPRPC()
 void StopHTTPRPC()
 {
     LOG_INFO("Stopping HTTP RPC server\n");
-    UnregisterHTTPHandler("/", true);
     if (httpRPCTimerInterface) {
         RPCUnregisterTimerInterface(httpRPCTimerInterface);
         delete httpRPCTimerInterface;

@@ -8,7 +8,10 @@ find_package(Libevent CONFIG REQUIRED)
 find_package(Secp256k1 REQUIRED)
 file(GLOB_RECURSE Source_List "*.cpp" "*.c" "*.hpp" "*.h")
 add_library (Blockchain ${Source_List})
-target_include_directories(Blockchain PUBLIC ${Boost_INCLUDE_DIRS})
+target_include_directories(Blockchain 
+PUBLIC ${Boost_INCLUDE_DIRS} 
+PRIVATE ../third_party/beast/include/
+)
 target_link_libraries(Blockchain 
 PRIVATE ${Boost_LIBRARIES}
 PUBLIC spdlog

@@ -16,7 +16,6 @@
 #include "random.h"
 #include "txdb.h"
 #include "txmempool.h"
-#include "ui_interface.h"
 #include "rpcserver.h"
 #include "util.h"
 #ifdef ENABLE_WALLET
@@ -27,7 +26,6 @@
 #include <boost/filesystem.hpp>
 #include <boost/thread.hpp>
 
-CClientUIInterface uiInterface; // Declared but not defined in ui_interface.h
 CWallet* pwalletMain;
 
 //extern void noui_connect();

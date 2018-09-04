@@ -6,7 +6,6 @@
 
 #include "netbase.h"
 #include "sync.h"
-#include "ui_interface.h"
 #include "util.h"
 #include "utilstrencodings.h"
 #include "Log.h"
@@ -100,7 +99,6 @@ void AddTimeData(const CNetAddr& ip, int64_t nOffsetSample)
                     fDone = true;
                     string strMessage = "Please check that your computer's date and time are correct! If your clock is wrong Ulord Core will not work properly.";
                     strMiscWarning = strMessage;
-                    uiInterface.ThreadSafeMessageBox(strMessage, "", CClientUIInterface::MSG_WARNING);
                 }
             }
         }

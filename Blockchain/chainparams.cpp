@@ -297,19 +297,18 @@ public:
         nPoolMaxTransactions = 3;
         nFulfilledRequestExpireTime = 60*60; // fulfilled requests expire in 1 hour
         strSporkPubKey = "03dc480bc3e569ea1ceed5ab8ed5904abd3e938e0f7e594ebf82397e7830fa56a5";
-#if 0
-        checkpointData = (CCheckpointData) {
-            boost::assign::map_list_of
-            (   0, uint256S("0x0000079b37c3c290dc81e95bca28aa7df5636145ae35ebee86e10cc3cce96fb2"))
-            (  10, uint256S("0x0000021d155df9c31a41f102ea2490a6706f58cc6a5bfac24723cec75804f82a"))
-            ( 100, uint256S("0x000001b236b617573c507362b517d721235efe9371aa9f4e9eaee6517e5af6a2"))
-	    ( 1000, uint256S("0x0000000084e4cd2c850c88f0978c2b46b08e9f9fefceb89f023e5274ae497b8a")),
+        checkpointData = CCheckpointData {
+			{
+				{0, uint256S("0x0000079b37c3c290dc81e95bca28aa7df5636145ae35ebee86e10cc3cce96fb2")},
+				{10, uint256S("0x0000021d155df9c31a41f102ea2490a6706f58cc6a5bfac24723cec75804f82a")},
+				{100, uint256S("0x000001b236b617573c507362b517d721235efe9371aa9f4e9eaee6517e5af6a2")},
+				{1000, uint256S("0x0000000084e4cd2c850c88f0978c2b46b08e9f9fefceb89f023e5274ae497b8a")}
+			},
             1526704298,                       // * UNIX timestamp of last checkpoint block
             0,                                // * total number of transactions between genesis and last checkpoint
                                               //   (the tx=... number in the SetBestChain debug.log lines)
             0                                 // * estimated number of transactions per day after checkpoint
         };
-#endif
         // Founders reward script expects a vector of 2-of-3 multisig addresses
         vFoundersRewardAddress = {
             "USu35JzWCXSvgvDL1utfFzb52zR1fdkfZ9", /* main-index: 0*/
@@ -431,16 +430,16 @@ public:
         nFulfilledRequestExpireTime = 5*60;                          // fulfilled requests expire in 5 minutes
         strSporkPubKey = "02284dd24544e031b1b575fc4bf720a57d57425157290a9882f4d0dd192b1a316c";
 
-#if 0
-        checkpointData = (CCheckpointData) {
-            boost::assign::map_list_of
-            ( 0, uint256S("0x000f378be841f44e75346eebd931b13041f0dee561af6a80cfea6669c1bfec03")),
+        checkpointData = CCheckpointData {
+			{
+				{0, uint256S("0x000f378be841f44e75346eebd931b13041f0dee561af6a80cfea6669c1bfec03")}
+			},
             1524057440,     // * UNIX timestamp of last checkpoint block
             0,              // * total number of transactions between genesis and last checkpoint
                             //   (the tx=... number in the SetBestChain debug.log lines)
             0               // * estimated number of transactions per day after checkpoint
         };
-#endif
+
         // Founders reward script expects a vector of 2-of-3 multisig addresses
         vFoundersRewardAddress = {
             "uTZGwu5TsrswPUEb9QciyhH9xpmRy4Rfq6",
@@ -532,15 +531,14 @@ public:
 
         nFulfilledRequestExpireTime = 5*60;                              // fulfilled requests expire in 5 minutes
 
-#if 0
-        checkpointData = (CCheckpointData){
-            boost::assign::map_list_of
-            (0, uint256S("0x09af15de1b9587ffd44cc1c29955c368482f2aa654f9fb62ed68d26f03134011")),
+        checkpointData = CCheckpointData {
+			{
+				{0, uint256S("0x09af15de1b9587ffd44cc1c29955c368482f2aa654f9fb62ed68d26f03134011")}
+			},
             0,
             0,
             0
         };
-#endif
 
         // Regtest Ulord addresses start with 'y'
         base58Prefixes[PUBKEY_ADDRESS] = std::vector<unsigned char>(1,140);

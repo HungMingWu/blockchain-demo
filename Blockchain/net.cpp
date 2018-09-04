@@ -19,7 +19,6 @@
 #include "hash.h"
 #include "primitives/transaction.h"
 #include "scheduler.h"
-#include "ui_interface.h"
 #include "wallet/wallet.h"
 #include "utilstrencodings.h"
 #include "ByteOrder.h"
@@ -1110,7 +1109,6 @@ void ThreadSocketHandler()
         }
         if(vNodes.size() != nPrevNodeCount) {
             nPrevNodeCount = vNodes.size();
-            uiInterface.NotifyNumConnectionsChanged(nPrevNodeCount);
         }
 
         //
@@ -1994,7 +1992,6 @@ void static Discover(boost::thread_group& threadGroup)
 
 void StartNode(boost::thread_group& threadGroup, CScheduler& scheduler)
 {
-    uiInterface.InitMessage("Loading addresses...");
     // Load addresses for peers.dat
     int64_t nStart = GetTimeMillis();
     {

@@ -9,7 +9,6 @@
 #include "net.h"
 #include "pubkey.h"
 #include "timedata.h"
-#include "ui_interface.h"
 #include "util.h"
 #include "utilstrencodings.h"
 #include "Log.h"
@@ -210,13 +209,11 @@ bool CAlert::ProcessAlert(const std::vector<unsigned char>& alertKey, bool fThre
             if (Cancels(alert))
             {
                 LOG_INFO("cancelling alert %d\n", alert.nID);
-                uiInterface.NotifyAlertChanged((*mi).first, CT_DELETED);
                 mapAlerts.erase(mi++);
             }
             else if (!alert.IsInEffect())
             {
                 LOG_INFO("expiring alert %d\n", alert.nID);
-                uiInterface.NotifyAlertChanged((*mi).first, CT_DELETED);
                 mapAlerts.erase(mi++);
             }
             else
@@ -239,7 +236,6 @@ bool CAlert::ProcessAlert(const std::vector<unsigned char>& alertKey, bool fThre
         // Notify UI and -alertnotify if it applies to me
         if(AppliesToMe())
         {
-            uiInterface.NotifyAlertChanged(GetHash(), CT_NEW);
             Notify(strStatusBar, fThread);
         }
     }

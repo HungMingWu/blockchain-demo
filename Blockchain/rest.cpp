@@ -116,19 +116,9 @@ static bool ParseHashStr(const string& strReq, uint256& v)
     return true;
 }
 
-static bool CheckWarmup(HTTPRequest* req)
-{
-    std::string statusmessage;
-    if (RPCIsInWarmup(&statusmessage))
-         return RESTERR(req, HTTP_SERVICE_UNAVAILABLE, "Service temporarily unavailable: " + statusmessage);
-    return true;
-}
-
 static bool rest_headers(HTTPRequest* req,
                          const std::string& strURIPart)
 {
-    if (!CheckWarmup(req))
-        return false;
     std::string param;
     const RetFormat rf = ParseDataFormat(param, strURIPart);
     vector<string> path;
@@ -204,8 +194,6 @@ static bool rest_block(HTTPRequest* req,
                        const std::string& strURIPart,
                        bool showTxDetails)
 {
-    if (!CheckWarmup(req))
-        return false;
     std::string hashStr;
     const RetFormat rf = ParseDataFormat(hashStr, strURIPart);
 
@@ -278,8 +266,6 @@ static bool rest_block_notxdetails(HTTPRequest* req, const std::string& strURIPa
 
 static bool rest_chaininfo(HTTPRequest* req, const std::string& strURIPart)
 {
-    if (!CheckWarmup(req))
-        return false;
     std::string param;
     const RetFormat rf = ParseDataFormat(param, strURIPart);
 
@@ -305,8 +291,6 @@ static bool rest_chaininfo(HTTPRequest* req, const std::string& strURIPart)
 
 static bool rest_mempool_info(HTTPRequest* req, const std::string& strURIPart)
 {
-    if (!CheckWarmup(req))
-        return false;
     std::string param;
     const RetFormat rf = ParseDataFormat(param, strURIPart);
 
@@ -332,8 +316,6 @@ static bool rest_mempool_info(HTTPRequest* req, const std::string& strURIPart)
 
 static bool rest_mempool_contents(HTTPRequest* req, const std::string& strURIPart)
 {
-    if (!CheckWarmup(req))
-        return false;
     std::string param;
     const RetFormat rf = ParseDataFormat(param, strURIPart);
 
@@ -359,8 +341,6 @@ static bool rest_mempool_contents(HTTPRequest* req, const std::string& strURIPar
 
 static bool rest_tx(HTTPRequest* req, const std::string& strURIPart)
 {
-    if (!CheckWarmup(req))
-        return false;
     std::string hashStr;
     const RetFormat rf = ParseDataFormat(hashStr, strURIPart);
 
@@ -414,8 +394,6 @@ static bool rest_tx(HTTPRequest* req, const std::string& strURIPart)
 
 static bool rest_getutxos(HTTPRequest* req, const std::string& strURIPart)
 {
-    if (!CheckWarmup(req))
-        return false;
     std::string param;
     const RetFormat rf = ParseDataFormat(param, strURIPart);
 
@@ -629,14 +607,4 @@ bool StartREST()
     for (unsigned int i = 0; i < ARRAYLEN(uri_prefixes); i++)
         RegisterHTTPHandler(uri_prefixes[i].prefix, false, uri_prefixes[i].handler);
     return true;
-}
-
-void InterruptREST()
-{
-}
-
-void StopREST()
-{
-    for (unsigned int i = 0; i < ARRAYLEN(uri_prefixes); i++)
-        UnregisterHTTPHandler(uri_prefixes[i].prefix, false);
 }

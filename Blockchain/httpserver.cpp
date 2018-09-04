@@ -12,7 +12,6 @@
 #include "netbase.h"
 #include "rpcprotocol.h" // For HTTP status codes
 #include "sync.h"
-#include "ui_interface.h"
 #include "Log.h"
 
 #include <stdio.h>
@@ -215,9 +214,6 @@ static bool InitHTTPAllowList()
         for (std::string strAllow : vAllow) {
             CSubNet suulord(strAllow);
             if (!suulord.IsValid()) {
-                uiInterface.ThreadSafeMessageBox(
-                    fmt::format("Invalid -rpcallowip suulord specification: %s. Valid are a single IP (e.g. 1.2.3.4), a network/netmask (e.g. 1.2.3.4/255.255.255.0) or a network/CIDR (e.g. 1.2.3.4/24).", strAllow),
-                    "", CClientUIInterface::MSG_ERROR);
                 return false;
             }
             rpc_allow_suulords.push_back(suulord);
@@ -259,18 +255,6 @@ static void http_request_cb(struct evhttp_request* req, void* arg)
     LOG_INFO("Received a %s request for %s from %s\n",
              RequestMethodString(hreq->GetRequestMethod()), hreq->GetURI(), hreq->GetPeer().ToString());
 
-    // Early address-based allow check
-    if (!ClientAllowed(hreq->GetPeer())) {
-        hreq->WriteReply(HTTP_FORBIDDEN);
-        return;
-    }
-
-    // Early reject unknown HTTP methods
-    if (hreq->GetRequestMethod() == HTTPRequest::UNKNOWN) {
-        hreq->WriteReply(HTTP_BADMETHOD);
-        return;
-    }
-
     // Find registered handler for prefix
     std::string strURI = hreq->GetURI();
     std::string path;
@@ -294,18 +278,9 @@ static void http_request_cb(struct evhttp_request* req, void* arg)
         assert(workQueue);
         if (workQueue->Enqueue(item.get()))
             item.release(); /* if true, queue took ownership */
-        else
-            item->req->WriteReply(HTTP_INTERNAL, "Work queue depth exceeded");
     } else {
         hreq->WriteReply(HTTP_NOTFOUND);
     }
-}
-
-/** Callback to reject HTTP requests after shutdown. */
-static void http_reject_request_cb(struct evhttp_request* req, void*)
-{
-    LOG_INFO("Rejecting request while shutting down\n");
-    evhttp_send_error(req, HTTP_SERVUNAVAIL, NULL);
 }
 
 /** Event dispatcher thread */
@@ -385,13 +360,6 @@ bool InitHTTPServer()
     if (!InitHTTPAllowList())
         return false;
 
-    if (GetBoolArg("-rpcssl", false)) {
-        uiInterface.ThreadSafeMessageBox(
-            "SSL mode for RPC (-rpcssl) is no longer supported.",
-            "", CClientUIInterface::MSG_ERROR);
-        return false;
-    }
-
     // Redirect libevent's logging to our own log
     event_set_log_callback(&libevent_log_cb);
 #ifdef WIN32
@@ -448,21 +416,6 @@ bool StartHTTPServer()
     for (int i = 0; i < rpcThreads; i++)
         boost::thread(std::bind(&HTTPWorkQueueRun, workQueue));
     return true;
-}
-
-void InterruptHTTPServer()
-{
-    LOG_INFO("Interrupting HTTP server\n");
-    if (eventHTTP) {
-        // Unlisten sockets
-        for (evhttp_bound_socket *socket : boundSockets) {
-            evhttp_del_accept_socket(eventHTTP, socket);
-        }
-        // Reject requests on current connections
-        evhttp_set_gencb(eventHTTP, http_reject_request_cb, NULL);
-    }
-    if (workQueue)
-        workQueue->Interrupt();
 }
 
 void StopHTTPServer()
@@ -540,12 +493,6 @@ HTTPRequest::HTTPRequest(struct evhttp_request* req) : req(req),
 }
 HTTPRequest::~HTTPRequest()
 {
-    if (!replySent) {
-        // Keep track of whether reply was sent to avoid request leaks
-        LOG_INFO("%s: Unhandled request\n", __func__);
-        WriteReply(HTTP_INTERNAL, "Unhandled request");
-    }
-    // evhttpd cleans up the request, as long as a reply was sent.
 }
 
 std::pair<bool, std::string> HTTPRequest::GetHeader(const std::string& hdr)
@@ -650,18 +597,3 @@ void RegisterHTTPHandler(const std::string &prefix, bool exactMatch, const HTTPR
     LOG_INFO("Registering HTTP handler for %s (exactmatch %d)\n", prefix, exactMatch);
     pathHandlers.push_back(HTTPPathHandler(prefix, exactMatch, handler));
 }
-
-void UnregisterHTTPHandler(const std::string &prefix, bool exactMatch)
-{
-    std::vector<HTTPPathHandler>::iterator i = pathHandlers.begin();
-    std::vector<HTTPPathHandler>::iterator iend = pathHandlers.end();
-    for (; i != iend; ++i)
-        if (i->prefix == prefix && i->exactMatch == exactMatch)
-            break;
-    if (i != iend)
-    {
-        LOG_INFO("Unregistering HTTP handler for %s (exactmatch %d)\n", prefix, exactMatch);
-        pathHandlers.erase(i);
-    }
-}
-

@@ -27,8 +27,6 @@ bool InitHTTPServer();
  * to register their handlers between InitHTTPServer and StartHTTPServer.
  */
 bool StartHTTPServer();
-/** Interrupt HTTP server threads */
-void InterruptHTTPServer();
 /** Stop HTTP server */
 void StopHTTPServer();
 
@@ -39,8 +37,6 @@ typedef std::function<void(HTTPRequest* req, const std::string &)> HTTPRequestHa
  * be invoked.
  */
 void RegisterHTTPHandler(const std::string &prefix, bool exactMatch, const HTTPRequestHandler &handler);
-/** Unregister handler for prefix */
-void UnregisterHTTPHandler(const std::string &prefix, bool exactMatch);
 
 /** Return evhttp event base. This can be used by submodules to
  * queue timers or custom events.

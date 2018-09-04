@@ -21,15 +21,6 @@
 #include <stdint.h>
 
 class CRPCCommand;
-
-namespace RPCServer
-{
-    void OnStarted(std::function<void ()> slot);
-    void OnStopped(std::function<void ()> slot);
-    void OnPreCommand(std::function<void (const CRPCCommand&)> slot);
-    void OnPostCommand(std::function<void (const CRPCCommand&)> slot);
-}
-
 class CBlockIndex;
 class CNetAddr;
 
@@ -44,19 +35,8 @@ public:
     //void parse(const UniValue& valRequest);
 };
 
-/** Query whether RPC is running */
-bool IsRPCRunning();
-
-/**
- * Set the RPC warmup status.  When this is done, all RPC calls will error out
- * immediately with RPC_IN_WARMUP.
- */
-void SetRPCWarmupStatus(const std::string& newStatus);
 /* Mark warmup as done.  RPC calls will be processed from now on.  */
 void SetRPCWarmupFinished();
-
-/* returns the current warmup state.  */
-bool RPCIsInWarmup(std::string *statusOut);
 
 #if 0
 /**
@@ -363,7 +343,6 @@ extern UniValue crosschainauditcontract(const UniValue &params, bool fHelp);
 #endif
 
 bool StartRPC();
-void InterruptRPC();
 void StopRPC();
 #if 0
 std::string JSONRPCExecBatch(const UniValue& vReq);

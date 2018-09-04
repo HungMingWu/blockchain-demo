@@ -17,12 +17,12 @@
 #include <utility>
 #include <vector>
 #include <boost/shared_ptr.hpp>
+#include <boost/signals2/signal.hpp>
 #include <spdlog/fmt/fmt.h>
 
 #include "../amount.h"
 #include "../base58.h"
 #include "../streams.h"
-#include "../ui_interface.h"
 #include "../util.h"
 #include "../utilstrencodings.h"
 #include "../validationinterface.h"
@@ -893,16 +893,14 @@ public:
      */
     boost::signals2::signal<void (CWallet *wallet, const CTxDestination
             &address, const std::string &label, bool isMine,
-            const std::string &purpose,
-            ChangeType status)> NotifyAddressBookChanged;
+            const std::string &purpose)> NotifyAddressBookChanged;
     boost::signals2::connection NotifyAddressBookChangedConn;
 
     /** 
      * Wallet transaction added, removed or updated.
      * @note called with lock cs_wallet held.
      */
-    boost::signals2::signal<void (CWallet *wallet, const uint256 &hashTx,
-            ChangeType status)> NotifyTransactionChanged;
+    boost::signals2::signal<void (CWallet *wallet, const uint256 &hashTx)> NotifyTransactionChanged;
     boost::signals2::connection NotifyTransactionChangedConn;
 
     /** Show progress e.g. for rescan */
