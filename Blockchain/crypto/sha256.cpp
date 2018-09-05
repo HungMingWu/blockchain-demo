@@ -43,27 +43,27 @@ void inline Initialize(uint32_t* s)
 }
 
 /** Perform one SHA-256 transformation, processing a 64-byte chunk. */
-void Transform(uint32_t* s, const unsigned char* chunk)
+void Transform(uint32_t* s, const uint32_t *chunk)
 {
     uint32_t a = s[0], b = s[1], c = s[2], d = s[3], e = s[4], f = s[5], g = s[6], h = s[7];
     uint32_t w0, w1, w2, w3, w4, w5, w6, w7, w8, w9, w10, w11, w12, w13, w14, w15;
 
-    Round(a, b, c, d, e, f, g, h, 0x428a2f98, w0 = betoh32(*((uint32_t*)chunk + 0)));
-	Round(h, a, b, c, d, e, f, g, 0x71374491, w1 = betoh32(*((uint32_t*)chunk + 4)));
-	Round(g, h, a, b, c, d, e, f, 0xb5c0fbcf, w2 = betoh32(*((uint32_t*)chunk + 8)));
-    Round(f, g, h, a, b, c, d, e, 0xe9b5dba5, w3 = betoh32(*((uint32_t*)chunk + 12)));
-	Round(e, f, g, h, a, b, c, d, 0x3956c25b, w4 = betoh32(*((uint32_t*)chunk + 16)));
-	Round(d, e, f, g, h, a, b, c, 0x59f111f1, w5 = betoh32(*((uint32_t*)chunk + 20)));
-	Round(c, d, e, f, g, h, a, b, 0x923f82a4, w6 = betoh32(*((uint32_t*)chunk + 24)));
-	Round(b, c, d, e, f, g, h, a, 0xab1c5ed5, w7 = betoh32(*((uint32_t*)chunk + 28)));
-	Round(a, b, c, d, e, f, g, h, 0xd807aa98, w8 = betoh32(*((uint32_t*)chunk + 32)));
-	Round(h, a, b, c, d, e, f, g, 0x12835b01, w9 = betoh32(*((uint32_t*)chunk + 36)));
-	Round(g, h, a, b, c, d, e, f, 0x243185be, w10 = betoh32(*((uint32_t*)chunk + 40)));
-	Round(f, g, h, a, b, c, d, e, 0x550c7dc3, w11 = betoh32(*((uint32_t*)chunk + 44)));
-	Round(e, f, g, h, a, b, c, d, 0x72be5d74, w12 = betoh32(*((uint32_t*)chunk + 48)));
-	Round(d, e, f, g, h, a, b, c, 0x80deb1fe, w13 = betoh32(*((uint32_t*)chunk + 52)));
-	Round(c, d, e, f, g, h, a, b, 0x9bdc06a7, w14 = betoh32(*((uint32_t*)chunk + 56)));
-	Round(b, c, d, e, f, g, h, a, 0xc19bf174, w15 = betoh32(*((uint32_t*)chunk + 60)));
+    Round(a, b, c, d, e, f, g, h, 0x428a2f98, w0 = betoh32(*(chunk + 0)));
+	Round(h, a, b, c, d, e, f, g, 0x71374491, w1 = betoh32(*(chunk + 1)));
+	Round(g, h, a, b, c, d, e, f, 0xb5c0fbcf, w2 = betoh32(*(chunk + 2)));
+    Round(f, g, h, a, b, c, d, e, 0xe9b5dba5, w3 = betoh32(*(chunk + 3)));
+	Round(e, f, g, h, a, b, c, d, 0x3956c25b, w4 = betoh32(*(chunk + 4)));
+	Round(d, e, f, g, h, a, b, c, 0x59f111f1, w5 = betoh32(*(chunk + 5)));
+	Round(c, d, e, f, g, h, a, b, 0x923f82a4, w6 = betoh32(*(chunk + 6)));
+	Round(b, c, d, e, f, g, h, a, 0xab1c5ed5, w7 = betoh32(*(chunk + 7)));
+	Round(a, b, c, d, e, f, g, h, 0xd807aa98, w8 = betoh32(*(chunk + 8)));
+	Round(h, a, b, c, d, e, f, g, 0x12835b01, w9 = betoh32(*(chunk + 9)));
+	Round(g, h, a, b, c, d, e, f, 0x243185be, w10 = betoh32(*(chunk + 10)));
+	Round(f, g, h, a, b, c, d, e, 0x550c7dc3, w11 = betoh32(*(chunk + 11)));
+	Round(e, f, g, h, a, b, c, d, 0x72be5d74, w12 = betoh32(*(chunk + 12)));
+	Round(d, e, f, g, h, a, b, c, 0x80deb1fe, w13 = betoh32(*(chunk + 13)));
+	Round(c, d, e, f, g, h, a, b, 0x9bdc06a7, w14 = betoh32(*(chunk + 14)));
+	Round(b, c, d, e, f, g, h, a, 0xc19bf174, w15 = betoh32(*(chunk + 15)));
 
     Round(a, b, c, d, e, f, g, h, 0xe49b69c1, w0 += sigma1(w14) + w9 + sigma0(w1));
     Round(h, a, b, c, d, e, f, g, 0xefbe4786, w1 += sigma1(w15) + w10 + sigma0(w2));
@@ -147,12 +147,12 @@ CSHA256& CSHA256::Write(const unsigned char* data, size_t len)
         memcpy(buf + bufsize, data, 64 - bufsize);
         bytes += 64 - bufsize;
         data += 64 - bufsize;
-        sha256::Transform(s, buf);
+        sha256::Transform(s, (uint32_t *)buf);
         bufsize = 0;
     }
     while (end >= data + 64) {
         // Process full chunks directly from the source.
-        sha256::Transform(s, data);
+        sha256::Transform(s, (uint32_t *)data);
         bytes += 64;
         data += 64;
     }

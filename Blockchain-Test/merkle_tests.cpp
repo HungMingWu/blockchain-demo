@@ -88,7 +88,8 @@ TEST_CASE("merkle_test")
 			}
 			// Compute the root of the block before mutating it.
 			bool unmutatedMutated = false;
-			uint256 unmutatedRoot = BlockMerkleRoot(block, &unmutatedMutated);
+			uint256 unmutatedRoot;
+			std::tie(unmutatedRoot, unmutatedMutated) = BlockMerkleRoot(block);
 			REQUIRE(unmutatedMutated == false);
 			// Optionally mutate by duplicating the last transactions, resulting in the same merkle root.
 			block.vtx.resize(ntx3);
@@ -107,7 +108,8 @@ TEST_CASE("merkle_test")
 			uint256 oldRoot = BlockBuildMerkleTree(block, &oldMutated, merkleTree);
 			// Compute the merkle root using the new mechanism.
 			bool newMutated = false;
-			uint256 newRoot = BlockMerkleRoot(block, &newMutated);
+			uint256 newRoot;
+			std::tie(newRoot, newMutated) = BlockMerkleRoot(block);
 			REQUIRE(oldRoot == newRoot);
 			REQUIRE(newRoot == unmutatedRoot);
 			REQUIRE((newRoot == uint256()) == (ntx == 0));
@@ -129,4 +131,5 @@ TEST_CASE("merkle_test")
 			}
 		}
 	}
+	int a = 1;
 }

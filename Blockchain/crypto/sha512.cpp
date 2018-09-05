@@ -42,27 +42,27 @@ void inline Initialize(uint64_t* s)
 }
 
 /** Perform one SHA-512 transformation, processing a 128-byte chunk. */
-void Transform(uint64_t* s, const unsigned char* chunk)
+void Transform(uint64_t* s, const uint64_t* chunk)
 {
     uint64_t a = s[0], b = s[1], c = s[2], d = s[3], e = s[4], f = s[5], g = s[6], h = s[7];
     uint64_t w0, w1, w2, w3, w4, w5, w6, w7, w8, w9, w10, w11, w12, w13, w14, w15;
 
-    Round(a, b, c, d, e, f, g, h, 0x428a2f98d728ae22ull, w0 = betoh64(*((uint64_t*)chunk + 0)));
-    Round(h, a, b, c, d, e, f, g, 0x7137449123ef65cdull, w1 = betoh64(*((uint64_t*)chunk + 8)));
-    Round(g, h, a, b, c, d, e, f, 0xb5c0fbcfec4d3b2full, w2 = betoh64(*((uint64_t*)chunk + 16)));
-    Round(f, g, h, a, b, c, d, e, 0xe9b5dba58189dbbcull, w3 = betoh64(*((uint64_t*)chunk + 24)));
-    Round(e, f, g, h, a, b, c, d, 0x3956c25bf348b538ull, w4 = betoh64(*((uint64_t*)chunk + 32)));
-    Round(d, e, f, g, h, a, b, c, 0x59f111f1b605d019ull, w5 = betoh64(*((uint64_t*)chunk + 40)));
-    Round(c, d, e, f, g, h, a, b, 0x923f82a4af194f9bull, w6 = betoh64(*((uint64_t*)chunk + 48)));
-    Round(b, c, d, e, f, g, h, a, 0xab1c5ed5da6d8118ull, w7 = betoh64(*((uint64_t*)chunk + 56)));
-    Round(a, b, c, d, e, f, g, h, 0xd807aa98a3030242ull, w8 = betoh64(*((uint64_t*)chunk + 64)));
-    Round(h, a, b, c, d, e, f, g, 0x12835b0145706fbeull, w9 = betoh64(*((uint64_t*)chunk + 72)));
-    Round(g, h, a, b, c, d, e, f, 0x243185be4ee4b28cull, w10 = betoh64(*((uint64_t*)chunk + 80)));
-    Round(f, g, h, a, b, c, d, e, 0x550c7dc3d5ffb4e2ull, w11 = betoh64(*((uint64_t*)chunk + 88)));
-    Round(e, f, g, h, a, b, c, d, 0x72be5d74f27b896full, w12 = betoh64(*((uint64_t*)chunk + 96)));
-    Round(d, e, f, g, h, a, b, c, 0x80deb1fe3b1696b1ull, w13 = betoh64(*((uint64_t*)chunk + 104)));
-    Round(c, d, e, f, g, h, a, b, 0x9bdc06a725c71235ull, w14 = betoh64(*((uint64_t*)chunk + 112)));
-    Round(b, c, d, e, f, g, h, a, 0xc19bf174cf692694ull, w15 = betoh64(*((uint64_t*)chunk + 120)));
+    Round(a, b, c, d, e, f, g, h, 0x428a2f98d728ae22ull, w0 = betoh64(*(chunk + 0)));
+    Round(h, a, b, c, d, e, f, g, 0x7137449123ef65cdull, w1 = betoh64(*(chunk + 1)));
+    Round(g, h, a, b, c, d, e, f, 0xb5c0fbcfec4d3b2full, w2 = betoh64(*(chunk + 2)));
+    Round(f, g, h, a, b, c, d, e, 0xe9b5dba58189dbbcull, w3 = betoh64(*(chunk + 3)));
+    Round(e, f, g, h, a, b, c, d, 0x3956c25bf348b538ull, w4 = betoh64(*(chunk + 4)));
+    Round(d, e, f, g, h, a, b, c, 0x59f111f1b605d019ull, w5 = betoh64(*(chunk + 5)));
+    Round(c, d, e, f, g, h, a, b, 0x923f82a4af194f9bull, w6 = betoh64(*(chunk + 6)));
+    Round(b, c, d, e, f, g, h, a, 0xab1c5ed5da6d8118ull, w7 = betoh64(*(chunk + 7)));
+    Round(a, b, c, d, e, f, g, h, 0xd807aa98a3030242ull, w8 = betoh64(*(chunk + 8)));
+    Round(h, a, b, c, d, e, f, g, 0x12835b0145706fbeull, w9 = betoh64(*(chunk + 9)));
+    Round(g, h, a, b, c, d, e, f, 0x243185be4ee4b28cull, w10 = betoh64(*(chunk + 10)));
+    Round(f, g, h, a, b, c, d, e, 0x550c7dc3d5ffb4e2ull, w11 = betoh64(*(chunk + 11)));
+    Round(e, f, g, h, a, b, c, d, 0x72be5d74f27b896full, w12 = betoh64(*(chunk + 12)));
+    Round(d, e, f, g, h, a, b, c, 0x80deb1fe3b1696b1ull, w13 = betoh64(*(chunk + 13)));
+    Round(c, d, e, f, g, h, a, b, 0x9bdc06a725c71235ull, w14 = betoh64(*(chunk + 14)));
+    Round(b, c, d, e, f, g, h, a, 0xc19bf174cf692694ull, w15 = betoh64(*(chunk + 15)));
 
     Round(a, b, c, d, e, f, g, h, 0xe49b69c19ef14ad2ull, w0 += sigma1(w14) + w9 + sigma0(w1));
     Round(h, a, b, c, d, e, f, g, 0xefbe4786384f25e3ull, w1 += sigma1(w15) + w10 + sigma0(w2));
@@ -164,12 +164,12 @@ CSHA512& CSHA512::Write(const unsigned char* data, size_t len)
         memcpy(buf + bufsize, data, 128 - bufsize);
         bytes += 128 - bufsize;
         data += 128 - bufsize;
-        sha512::Transform(s, buf);
+        sha512::Transform(s, (uint64_t *)buf);
         bufsize = 0;
     }
     while (end >= data + 128) {
         // Process full chunks directly from the source.
-        sha512::Transform(s, data);
+        sha512::Transform(s, (uint64_t *)data);
         data += 128;
         bytes += 128;
     }

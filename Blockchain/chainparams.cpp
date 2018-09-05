@@ -138,7 +138,7 @@ static CBlock CreateGenesisBlock(const char* pszTimestamp, const CScript& genesi
     genesis.nVersion = nVersion;
     genesis.vtx.push_back(txNew);
     genesis.hashPrevBlock.SetNull();
-    genesis.hashMerkleRoot = BlockMerkleRoot(genesis);
+    std::tie(genesis.hashMerkleRoot, std::ignore) = BlockMerkleRoot(genesis);
     genesis.hashClaimTrie = uint256S("0x1");
     return genesis;
 }
@@ -258,9 +258,8 @@ public:
         //findGenesis(&genesis, "main");
 #endif
         consensus.hashGenesisBlock = genesis.GetHash();
-        assert(consensus.hashGenesisBlock == uint256S("0x0000079b37c3c290dc81e95bca28aa7df5636145ae35ebee86e10cc3cce96fb2"));
         assert(genesis.hashMerkleRoot == uint256S("0x69de4474f3172f2366a11b9d5a2b9138fb5bbb0b77713d42fdfe69fc64a34162"));
-
+        assert(consensus.hashGenesisBlock == uint256S("0x0000079b37c3c290dc81e95bca28aa7df5636145ae35ebee86e10cc3cce96fb2"));
 
         // Ulord addresses start with 'U'
         base58Prefixes[PUBKEY_ADDRESS] = std::vector<unsigned char>(1,68);
@@ -395,8 +394,8 @@ public:
         //findGenesis(&genesis, "testnet");
 #endif
         consensus.hashGenesisBlock = genesis.GetHash();
-        assert(consensus.hashGenesisBlock == uint256S("0x000f378be841f44e75346eebd931b13041f0dee561af6a80cfea6669c1bfec03"));
         assert(genesis.hashMerkleRoot == uint256S("0xa12949fc4a1735c8cbd6444bf9b4aea61300bc7aee9fec741af5a8c2fe386216"));
+        assert(consensus.hashGenesisBlock == uint256S("0x000f378be841f44e75346eebd931b13041f0dee561af6a80cfea6669c1bfec03"));
 
         vFixedSeeds.clear();
         vSeeds.clear();
@@ -517,8 +516,8 @@ public:
         //findGenesis(&genesis, "regtest");
 #endif
         consensus.hashGenesisBlock = genesis.GetHash();
-        assert(consensus.hashGenesisBlock == uint256S("0x0c1417be9488c5bc9c2974a8c2edf89089fdf9fa3e0e4a0d4c668ab973fcf8b4"));
         assert(genesis.hashMerkleRoot == uint256S("0x69de4474f3172f2366a11b9d5a2b9138fb5bbb0b77713d42fdfe69fc64a34162"));
+        assert(consensus.hashGenesisBlock == uint256S("0x0c1417be9488c5bc9c2974a8c2edf89089fdf9fa3e0e4a0d4c668ab973fcf8b4"));
 
         vFixedSeeds.clear();                                             //! Regtest mode doesn't have any fixed seeds.
         vSeeds.clear();                                                  //! Regtest mode doesn't have any DNS seeds.

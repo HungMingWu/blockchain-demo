@@ -51,26 +51,27 @@ void inline R42(uint32_t& a, uint32_t b, uint32_t& c, uint32_t d, uint32_t e, ui
 void inline R52(uint32_t& a, uint32_t b, uint32_t& c, uint32_t d, uint32_t e, uint32_t x, int r) { Round(a, b, c, d, e, f1(b, c, d), x, 0, r); }
 
 /** Perform a RIPEMD-160 transformation, processing a 64-byte chunk. */
-void Transform(uint32_t* s, const unsigned char* chunk)
+void Transform(uint32_t* s, const uint32_t *chunk)
 {
     uint32_t a1 = s[0], b1 = s[1], c1 = s[2], d1 = s[3], e1 = s[4];
     uint32_t a2 = a1, b2 = b1, c2 = c1, d2 = d1, e2 = e1;
-	uint32_t w0 = letoh32(*((uint32_t*)chunk + 0)),
-		w1 = letoh32(*((uint32_t*)chunk + 4)),
-		w2 = letoh32(*((uint32_t*)chunk + 8)),
-		w3 = letoh32(*((uint32_t*)chunk + 12));
-	uint32_t w4 = letoh32(*((uint32_t*)chunk + 16)),
-		w5 = letoh32(*((uint32_t*)chunk + 20)),
-		w6 = letoh32(*((uint32_t*)chunk + 24)),
-		w7 = letoh32(*((uint32_t*)chunk + 28));
-	uint32_t w8 = letoh32(*((uint32_t*)chunk + 32)),
-		w9 = letoh32(*((uint32_t*)chunk + 36)),
-		w10 = letoh32(*((uint32_t*)chunk + 40)),
-		w11 = letoh32(*((uint32_t*)chunk + 44));
-	uint32_t w12 = letoh32(*((uint32_t*)chunk + 48)),
-		w13 = letoh32(*((uint32_t*)chunk + 52)),
-		w14 = letoh32(*((uint32_t*)chunk + 56)),
-		w15 = letoh32(*((uint32_t*)chunk + 60));
+	uint32_t
+		w0 = letoh32(*(chunk + 0)),
+		w1 = letoh32(*(chunk + 1)),
+		w2 = letoh32(*(chunk + 2)),
+		w3 = letoh32(*(chunk + 3)),
+		w4 = letoh32(*(chunk + 4)),
+		w5 = letoh32(*(chunk + 5)),
+		w6 = letoh32(*(chunk + 6)),
+		w7 = letoh32(*(chunk + 7)),
+		w8 = letoh32(*(chunk + 8)),
+		w9 = letoh32(*(chunk + 9)),
+		w10 = letoh32(*(chunk + 10)),
+		w11 = letoh32(*(chunk + 11)),
+		w12 = letoh32(*(chunk + 12)),
+		w13 = letoh32(*(chunk + 13)),
+		w14 = letoh32(*(chunk + 14)),
+		w15 = letoh32(*(chunk + 15));
 
     R11(a1, b1, c1, d1, e1, w0, 11);
     R12(a2, b2, c2, d2, e2, w5, 8);
@@ -266,12 +267,12 @@ CRIPEMD160& CRIPEMD160::Write(const unsigned char* data, size_t len)
         memcpy(buf + bufsize, data, 64 - bufsize);
         bytes += 64 - bufsize;
         data += 64 - bufsize;
-        ripemd160::Transform(s, buf);
+        ripemd160::Transform(s, (uint32_t *)buf);
         bufsize = 0;
     }
     while (end >= data + 64) {
         // Process full chunks directly from the source.
-        ripemd160::Transform(s, data);
+        ripemd160::Transform(s, (uint32_t *)data);
         bytes += 64;
         data += 64;
     }

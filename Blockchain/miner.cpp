@@ -499,7 +499,7 @@ void IncrementExtraNonce(CBlock* pblock, const CBlockIndex* pindexPrev, unsigned
     assert(txCoinbase.vin[0].scriptSig.size() <= 100);
 
     pblock->vtx[0] = txCoinbase;
-    pblock->hashMerkleRoot = BlockMerkleRoot(*pblock);
+    std::tie(pblock->hashMerkleRoot, std::ignore) = BlockMerkleRoot(*pblock);
 }
 
 static bool ProcessBlockFound(const CBlock* pblock, const CChainParams& chainparams)

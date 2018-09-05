@@ -107,7 +107,7 @@ bool CreateBlock(CBlockTemplate* pblocktemplate)
 	txCoinbase.vin[0].scriptSig = CScript() << CScriptNum(unique_block_counter++) << CScriptNum(chainActive.Height());
 	txCoinbase.vout[0].nValue = GetBlockSubsidy(chainActive.Height() + 1, chainparams.GetConsensus());
 	pblock->vtx[0] = CTransaction(txCoinbase);
-	pblock->hashMerkleRoot = BlockMerkleRoot(*pblock);
+	std::tie(pblock->hashMerkleRoot, std::ignore) = BlockMerkleRoot(*pblock);
 	pblock->nBits = GetNextWorkRequired(chainActive.Tip(), pblock, chainparams.GetConsensus());
 	for (arith_uint256 i = 0; ; ++i)
 	{

@@ -4256,7 +4256,8 @@ bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW, bo
     // Check the merkle root.
     if (fCheckMerkleRoot) {
         bool mutated;
-        uint256 hashMerkleRoot2 = BlockMerkleRoot(block, &mutated);
+        uint256 hashMerkleRoot2;
+        std::tie(hashMerkleRoot2, mutated) = BlockMerkleRoot(block);
         if (block.hashMerkleRoot != hashMerkleRoot2) {
 			LOG_ERROR("CheckBlock(): hashMerkleRoot mismatch");
             state.DoS(100, REJECT_INVALID, "bad-txnmrklroot", true);
