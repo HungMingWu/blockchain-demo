@@ -70,7 +70,7 @@ inline uint160 uint160S(const std::string& str)
 	return rv;
 }
 
-TEST_CASE("basics") // constructors, equality, inequality
+TEST_CASE("uint256_basics") // constructors, equality, inequality
 {
 	REQUIRE(1 == 0 + 1);
 	// constructor uint256(vector<char>):
@@ -122,7 +122,7 @@ TEST_CASE("basics") // constructors, equality, inequality
 	REQUIRE(uint160(OneS) == OneS);
 }
 
-TEST_CASE("comparison") // <= >= < >
+TEST_CASE("uint256_comparison") // <= >= < >
 {
 	uint256 LastL;
 	for (int i = 255; i >= 0; --i) {
@@ -154,7 +154,7 @@ TEST_CASE("comparison") // <= >= < >
 	REQUIRE(R2S < MaxS);
 }
 
-TEST_CASE("methods") // GetHex SetHex begin() end() size() GetLow64 GetSerializeSize, Serialize, Unserialize
+TEST_CASE("uint256_methods") // GetHex SetHex begin() end() size() GetLow64 GetSerializeSize, Serialize, Unserialize
 {
 	REQUIRE(R1L.GetHex() == R1L.ToString());
 	REQUIRE(R2L.GetHex() == R2L.ToString());

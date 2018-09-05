@@ -62,7 +62,7 @@ static std::string ArrayToString(const unsigned char A[], unsigned int width)
 	return Stream.str();
 }
 
-TEST_CASE("basics") // constructors, equality, inequality
+TEST_CASE("arith_basics") // constructors, equality, inequality
 {
 	REQUIRE(1 == 0 + 1);
 	// constructor arith_uint256(vector<char>):
@@ -269,7 +269,7 @@ TEST_CASE("bitwiseOperators")
 	TmpL ^= Tmp64;  REQUIRE(TmpL == (R1L ^ arith_uint256(Tmp64)));
 }
 
-TEST_CASE("comparison") // <= >= < >
+TEST_CASE("arith_comparison") // <= >= < >
 {
 	arith_uint256 TmpL;
 	for (unsigned int i = 0; i < 256; ++i) {
@@ -372,7 +372,7 @@ bool almostEqual(double d1, double d2)
 	return fabs(d1 - d2) <= 4 * fabs(d1)*std::numeric_limits<double>::epsilon();
 }
 
-TEST_CASE("methods") // GetHex SetHex size() GetLow64 GetSerializeSize, Serialize, Unserialize
+TEST_CASE("arith_methods") // GetHex SetHex size() GetLow64 GetSerializeSize, Serialize, Unserialize
 {
 	REQUIRE(R1L.GetHex() == R1L.ToString());
 	REQUIRE(R2L.GetHex() == R2L.ToString());

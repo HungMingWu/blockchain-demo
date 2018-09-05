@@ -23,7 +23,7 @@ std::string base_blob<BITS>::GetHex() const
 {
 	std::string result;
     for (unsigned int i = 0; i < sizeof(data); i++)
-		result += fmt::format("{}", data[sizeof(data) - i - 1]);
+		result += fmt::format("{:02x}", data[sizeof(data) - i - 1]);
 	return result;
 }
 

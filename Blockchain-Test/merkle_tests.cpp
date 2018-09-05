@@ -2,6 +2,7 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#include <tuple>
 #include <catch2/catch.hpp>
 
 #include "consensus/merkle.h"
@@ -9,12 +10,11 @@
 #include "hash.h"
 
 // Older version of the merkle root computation code, for comparison.
-static uint256 BlockBuildMerkleTree(const CBlock& block, bool* fMutated, std::vector<uint256>& vMerkleTree)
+static std::tuple<uint256, bool, std::vector<uint256>> BlockBuildMerkleTree(const CBlock& block)
 {
-	vMerkleTree.clear();
-	vMerkleTree.reserve(block.vtx.size() * 2 + 16); // Safe upper bound for the number of total nodes.
-	for (std::vector<CTransaction>::const_iterator it(block.vtx.begin()); it != block.vtx.end(); ++it)
-		vMerkleTree.push_back(it->GetHash());
+	std::vector<uint256> vMerkleTree(block.vtx.size() * 2 + 16);
+	for (const auto & vtx : block.vtx)
+		vMerkleTree.push_back(vtx.GetHash());
 	int j = 0;
 	bool mutated = false;
 	for (int nSize = block.vtx.size(); nSize > 1; nSize = (nSize + 1) / 2)
@@ -31,23 +31,19 @@ static uint256 BlockBuildMerkleTree(const CBlock& block, bool* fMutated, std::ve
 		}
 		j += nSize;
 	}
-	if (fMutated) {
-		*fMutated = mutated;
-	}
-	return (vMerkleTree.empty() ? uint256() : vMerkleTree.back());
+	uint256 value = vMerkleTree.empty() ? uint256() : vMerkleTree.back();
+	return { value, mutated, vMerkleTree  };
 }
 
 // Older version of the merkle branch computation code, for comparison.
-static std::vector<uint256> BlockGetMerkleBranch(const CBlock& block, const std::vector<uint256>& vMerkleTree, int nIndex)
+static std::vector<uint256> BlockGetMerkleBranch(const CBlock& block, const std::vector<uint256>& vMerkleTree, size_t nIndex)
 {
 	std::vector<uint256> vMerkleBranch;
-	int j = 0;
-	for (int nSize = block.vtx.size(); nSize > 1; nSize = (nSize + 1) / 2)
+	for (size_t nSize = block.vtx.size(), j = 0; nSize > 1; j += nSize, nSize = (nSize + 1) / 2)
 	{
-		int i = std::min(nIndex ^ 1, nSize - 1);
+		size_t i = std::min(nIndex ^ 1, nSize - 1);
 		vMerkleBranch.push_back(vMerkleTree[j + i]);
 		nIndex >>= 1;
-		j += nSize;
 	}
 	return vMerkleBranch;
 }
@@ -105,7 +101,8 @@ TEST_CASE("merkle_test")
 			// Compute the merkle root and merkle tree using the old mechanism.
 			bool oldMutated = false;
 			std::vector<uint256> merkleTree;
-			uint256 oldRoot = BlockBuildMerkleTree(block, &oldMutated, merkleTree);
+			uint256 oldRoot;
+			std::tie(oldRoot, oldMutated, merkleTree) = BlockBuildMerkleTree(block);
 			// Compute the merkle root using the new mechanism.
 			bool newMutated = false;
 			uint256 newRoot;
@@ -131,5 +128,4 @@ TEST_CASE("merkle_test")
 			}
 		}
 	}
-	int a = 1;
 }
