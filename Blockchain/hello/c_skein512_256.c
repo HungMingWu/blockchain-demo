@@ -12,11 +12,9 @@
 void crypto_skein512_256(uint8_t *input, uint32_t inputLen, uint8_t *output) {
 	uint8_t result[SKEIN512_256_BINARY_SIZE];
 
-#if 0
 	sph_skein256_context ctx;
 	sph_skein256_init(&ctx);
 	sph_skein256(&ctx, input, inputLen);
 	sph_skein256_close(&ctx, result);
-#endif
 	memcpy(output, result, OUTPUT_LEN*sizeof(uint8_t));
 }

@@ -490,7 +490,7 @@ public:
             Check();
         }
         if (fRet)
-            LOG_INFO("Added %s from %s: %i tried, %i new\n", addr.ToStringIPPort(), source.ToString(), nTried, nNew);
+            LOG_INFO("Added {} from {}: {} tried, {} new\n", addr.ToStringIPPort(), source.ToString(), nTried, nNew);
         return fRet;
     }
 

@@ -8,15 +8,14 @@ set(TEST_SRCS
 	#accounting_tests.cpp
 	allocator_tests.cpp # TestOK
 	arith_uint256_tests.cpp # TestOK
-	#addrman_tests.cpp 
+	addrman_tests.cpp # TestOK
 	#merkle_tests.cpp
 	base32_tests.cpp # TestOK
 	base64_tests.cpp # TestOK
 	#bip32_tests.cpp
-	#bloom_tests.cpp
+	bloom_tests.cpp # TestOK
 	cachemap_tests.cpp # TestOK
 	cachemultimap_tests.cpp # TestOK
-	#checkblock_tests.cpp
 	#coins_tests.cpp
 	crypto_tests.cpp # TestOK
 	compress_tests.cpp # TestOK
@@ -29,7 +28,7 @@ set(TEST_SRCS
 	#miner_tests.cpp
 	#multisig_tests.cpp
 	#netbase_tests.cpp
-	#pmt_tests.cpp
+	pmt_tests.cpp # TestOK
 	#policyestimator_tests.cpp
 	#pow_tests.cpp
 	#prevector_tests.cpp
@@ -53,10 +52,10 @@ set(TEST_SRCS
 	#txvalidationcache_tests.cpp
 	uint256_tests.cpp # TestOK
 	util_tests.cpp  # TestOK
-	#versionbits_tests.cpp
+	versionbits_tests.cpp # TestOK
 	#Checkpoints_tests.cpp
 	#DoS_tests.cpp
-	#test_ulord.cpp
+	test_ulord.cpp
 )
 add_executable(unit_test test.cpp ${TEST_SRCS})
 target_compile_features(unit_test PRIVATE cxx_std_14)

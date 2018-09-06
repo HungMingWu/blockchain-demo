@@ -125,7 +125,7 @@ public:
      */
     uint64_t GetCheapHash() const
     {
-        return letoh64(data);
+        return letoh64(*(uint64_t *)data);
     }
 
     /** A more secure, salted hash function.

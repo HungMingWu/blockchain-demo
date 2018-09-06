@@ -7,12 +7,13 @@
 #include "addrman.h"
 #include <string>
 #include "random.h"
+#include "test_ulord.h"
 
 using namespace std;
 
 class CAddrManTest : public CAddrMan {};
 
-TEST_CASE("addrman_simple")
+TEST_CASE_METHOD(BasicTestingSetup, "addrman_simple")
 {
 	CAddrManTest addrman;
 
@@ -53,7 +54,7 @@ TEST_CASE("addrman_simple")
 	REQUIRE(addr_null2.ToString() == "[::]:0");
 }
 
-TEST_CASE("addrman_ports")
+TEST_CASE_METHOD(BasicTestingSetup, "addrman_ports")
 {
 	CAddrManTest addrman;
 
@@ -85,7 +86,7 @@ TEST_CASE("addrman_ports")
 }
 
 
-TEST_CASE("addrman_select")
+TEST_CASE_METHOD(BasicTestingSetup, "addrman_select")
 {
 	CAddrManTest addrman;
 

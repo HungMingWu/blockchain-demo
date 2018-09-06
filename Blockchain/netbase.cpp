@@ -937,9 +937,9 @@ std::string CNetAddr::ToStringIP(bool fUseGetnameinfo) const
         }
     }
     if (IsIPv4())
-        return fmt::format("%u.%u.%u.%u", GetByte(3), GetByte(2), GetByte(1), GetByte(0));
+        return fmt::format("{:u}.{:u}.{:u}.{:u}", GetByte(3), GetByte(2), GetByte(1), GetByte(0));
     else
-        return fmt::format("%x:%x:%x:%x:%x:%x:%x:%x",
+        return fmt::format("{:x}:{:x}:{:x}:{:x}:{:x}:{:x}:{:x}:{:x}",
                          GetByte(15) << 8 | GetByte(14), GetByte(13) << 8 | GetByte(12),
                          GetByte(11) << 8 | GetByte(10), GetByte(9) << 8 | GetByte(8),
                          GetByte(7) << 8 | GetByte(6), GetByte(5) << 8 | GetByte(4),
@@ -1268,7 +1268,7 @@ std::vector<unsigned char> CService::GetKey() const
 
 std::string CService::ToStringPort() const
 {
-    return fmt::format("%u", port);
+    return fmt::format("{}", port);
 }
 
 std::string CService::ToStringIPPort(bool fUseGetnameinfo) const
