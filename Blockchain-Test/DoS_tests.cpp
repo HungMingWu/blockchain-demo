@@ -15,6 +15,7 @@
 #include "script/sign.h"
 #include "serialize.h"
 #include "util.h"
+#include "test_ulord.h"
 
 // Tests this internal-to-main.cpp method:
 extern bool AddOrphanTx(const CTransaction& tx, NodeId peer);
@@ -35,7 +36,7 @@ CService ip(uint32_t i)
 }
 
 
-TEST_CASE("DoS_banning")
+TEST_CASE_METHOD(TestingSetup, "DoS_banning")
 {
 	CNode::ClearBanned();
 	CAddress addr1(ip(0xa0b0c001));
@@ -58,7 +59,7 @@ TEST_CASE("DoS_banning")
 	REQUIRE(CNode::IsBanned(addr2));
 }
 
-TEST_CASE("DoS_banscore")
+TEST_CASE_METHOD(TestingSetup, "DoS_banscore")
 {
 	CNode::ClearBanned();
 	mapArgs["-banscore"] = "111"; // because 11 is my favorite number
@@ -77,7 +78,7 @@ TEST_CASE("DoS_banscore")
 	mapArgs.erase("-banscore");
 }
 
-TEST_CASE("DoS_bantime")
+TEST_CASE_METHOD(TestingSetup, "DoS_bantime")
 {
 	CNode::ClearBanned();
 	int64_t nStartTime = GetTime();
@@ -107,7 +108,7 @@ CTransaction RandomOrphan()
 	return it->second.tx;
 }
 
-TEST_CASE("DoS_mapOrphans")
+TEST_CASE_METHOD(TestingSetup, "DoS_mapOrphans")
 {
 	CKey key;
 	key.MakeNewKey(true);

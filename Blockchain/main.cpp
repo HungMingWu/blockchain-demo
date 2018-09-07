@@ -641,7 +641,7 @@ bool AddOrphanTx(const CTransaction& tx, NodeId peer) EXCLUSIVE_LOCKS_REQUIRED(c
     unsigned int sz = tx.GetSerializeSize(SER_NETWORK, CTransaction::CURRENT_VERSION);
     if (sz > 5000)
     {
-        LOG_INFO("ignoring large orphan tx (size: %u, hash: %s)\n", sz, hash.ToString());
+        LOG_INFO("ignoring large orphan tx (size: {}, hash: {})", sz, hash.ToString());
         return false;
     }
 
@@ -650,7 +650,7 @@ bool AddOrphanTx(const CTransaction& tx, NodeId peer) EXCLUSIVE_LOCKS_REQUIRED(c
     for (const CTxIn& txin : tx.vin)
         mapOrphanTransactionsByPrev[txin.prevout.hash].insert(hash);
 
-    LOG_INFO("stored orphan tx %s (mapsz %u prevsz %u)\n", hash.ToString(),
+    LOG_INFO("stored orphan tx {} (mapsz {} prevsz {})", hash.ToString(),
              mapOrphanTransactions.size(), mapOrphanTransactionsByPrev.size());
     return true;
 }
@@ -685,7 +685,7 @@ void EraseOrphansFor(NodeId peer)
             ++nErased;
         }
     }
-    if (nErased > 0) LOG_INFO("Erased %d orphan tx from peer %d\n", nErased, peer);
+    if (nErased > 0) LOG_INFO("Erased {} orphan tx from peer {}", nErased, peer);
 }
 
 
@@ -1069,7 +1069,7 @@ bool CheckTransaction(const CTransaction& tx, CValidationState &state)
 void LimitMempoolSize(CTxMemPool& pool, size_t limit, unsigned long age) {
     int expired = pool.Expire(GetTime() - age);
     if (expired != 0)
-        LOG_INFO("Expired %i transactions from the memory pool\n", expired);
+        LOG_INFO("Expired {} transactions from the memory pool", expired);
 
     std::vector<uint256> vNoSpendsRemaining;
     pool.TrimToSize(limit, &vNoSpendsRemaining);
@@ -1354,7 +1354,7 @@ bool AcceptToMemoryPoolWorker(CTxMemPool& pool, CValidationState &state, const C
                 state.DoS(0, REJECT_INSUFFICIENTFEE, "rate limited free transaction");
                 return false;
             }
-            LOG_INFO("Rate limit dFreeCount: %g => %g\n", dFreeCount, dFreeCount+nSize);
+            LOG_INFO("Rate limit dFreeCount: {:g} => {:g}", dFreeCount, dFreeCount+nSize);
             dFreeCount += nSize;
         }
 
@@ -1561,7 +1561,7 @@ bool AcceptToMemoryPoolWorker(CTxMemPool& pool, CValidationState &state, const C
         // Remove conflicting transactions from the mempool
         for (const CTxMemPool::txiter it : allConflicting)
         {
-            LOG_INFO("replacing tx %s with %s for %s UT additional fees, %d delta bytes\n",
+            LOG_INFO("replacing tx {} with {} for {} UT additional fees, {} delta bytes",
                     it->GetTx().GetHash().ToString(),
                     hash.ToString(),
                     FormatMoney(nModifiedFees - nConflictingFees),
@@ -7279,7 +7279,7 @@ bool SendMessages(CNode* pto)
                    got back an empty response.  */
                 if (pindexStart->pprev)
                     pindexStart = pindexStart->pprev;
-                LOG_INFO("initial getheaders (%d) to peer=%d (startheight:%d)\n", pindexStart->nHeight, pto->id, pto->nStartingHeight);
+                LOG_INFO("initial getheaders ({}) to peer={} (startheight:{})\n", pindexStart->nHeight, pto->id, pto->nStartingHeight);
                 pto->PushMessage(NetMsgType::GETHEADERS, chainActive.GetLocator(pindexStart), uint256());
             }
         }
@@ -7371,7 +7371,7 @@ bool SendMessages(CNode* pto)
                     // This should be very rare and could be optimized out.
                     // Just log for now.
                     if (chainActive[pindex->nHeight] != pindex) {
-                        LOG_INFO("Announcing block %s not on main chain (tip=%s)\n",
+                        LOG_INFO("Announcing block {} not on main chain (tip={})",
                             hashToAnnounce.ToString(), chainActive.Tip()->GetBlockHash().ToString());
                     }
 
@@ -7380,18 +7380,18 @@ bool SendMessages(CNode* pto)
                     // setInventoryKnown to track this.)
                     if (!PeerHasHeader(&state, pindex)) {
                         pto->PushInventory(CInv(MSG_BLOCK, hashToAnnounce));
-                        LOG_INFO("%s: sending inv peer=%d hash=%s\n", __func__,
+                        LOG_INFO("{}: sending inv peer={} hash={}", __func__,
                             pto->id, hashToAnnounce.ToString());
                     }
                 }
             } else if (!vHeaders.empty()) {
                 if (vHeaders.size() > 1) {
-                    LOG_INFO("%s: %u headers, range (%s, %s), to peer=%d\n", __func__,
+                    LOG_INFO("{}: {} headers, range ({}, {}), to peer={}", __func__,
                             vHeaders.size(),
                             vHeaders.front().GetHash().ToString(),
                             vHeaders.back().GetHash().ToString(), pto->id);
                 } else {
-                    LOG_INFO("%s: sending header %s to peer=%d\n", __func__,
+                    LOG_INFO("{}: sending header {} to peer={}", __func__,
                             vHeaders.front().GetHash().ToString(), pto->id);
                 }
                 pto->PushMessage(NetMsgType::HEADERS, vHeaders);
@@ -7432,7 +7432,7 @@ bool SendMessages(CNode* pto)
 
                     if (fTrickleWait)
                     {
-                        LOG_INFO("SendMessages -- queued inv(vInvWait): %s  index=%d peer=%d\n", inv.ToString(), vInvWait.size(), pto->id);
+                        LOG_INFO("SendMessages -- queued inv(vInvWait): {}  index={} peer={}\n", inv.ToString(), vInvWait.size(), pto->id);
                         vInvWait.push_back(inv);
                         continue;
                     }
@@ -7440,11 +7440,11 @@ bool SendMessages(CNode* pto)
 
                 pto->filterInventoryKnown.insert(inv.hash);
 
-                LOG_INFO("SendMessages -- queued inv: %s  index=%d peer=%d\n", inv.ToString(), vInv.size(), pto->id);
+                LOG_INFO("SendMessages -- queued inv: {}  index={} peer={}", inv.ToString(), vInv.size(), pto->id);
                 vInv.push_back(inv);
                 if (vInv.size() >= 1000)
                 {
-                    LOG_INFO("SendMessages -- pushing inv's: count=%d peer=%d\n", vInv.size(), pto->id);
+                    LOG_INFO("SendMessages -- pushing inv's: count={} peer={}", vInv.size(), pto->id);
                     pto->PushMessage(NetMsgType::INV, vInv);
                     vInv.clear();
                 }
@@ -7452,7 +7452,7 @@ bool SendMessages(CNode* pto)
             pto->vInventoryToSend = vInvWait;
         }
         if (!vInv.empty()) {
-            LOG_INFO("SendMessages -- pushing tailing inv's: count=%d peer=%d\n", vInv.size(), pto->id);
+            LOG_INFO("SendMessages -- pushing tailing inv's: count={} peer={}", vInv.size(), pto->id);
             pto->PushMessage(NetMsgType::INV, vInv);
         }
 
@@ -7462,7 +7462,7 @@ bool SendMessages(CNode* pto)
             // Stalling only triggers when the block download window cannot move. During normal steady state,
             // the download window should be much larger than the to-be-downloaded set of blocks, so disconnection
             // should only happen during initial block download.
-            LOG_INFO("Peer=%d is stalling block download, disconnecting\n", pto->id);
+            LOG_INFO("Peer={} is stalling block download, disconnecting", pto->id);
             pto->fDisconnect = true;
         }
         // In case there is a block that has been in flight from this peer for 2 + 0.5 * N times the block interval
@@ -7474,7 +7474,7 @@ bool SendMessages(CNode* pto)
             QueuedBlock &queuedBlock = state.vBlocksInFlight.front();
             int nOtherPeersWithValidatedDownloads = nPeersWithValidatedDownloads - (state.nBlocksInFlightValidHeaders > 0);
             if (nNow > state.nDownloadingSince + consensusParams.nPowTargetSpacing * (BLOCK_DOWNLOAD_TIMEOUT_BASE + BLOCK_DOWNLOAD_TIMEOUT_PER_PEER * nOtherPeersWithValidatedDownloads)) {
-                LOG_INFO("Timeout downloading block %s from peer=%d, disconnecting\n", queuedBlock.hash.ToString(), pto->id);
+                LOG_INFO("Timeout downloading block {} from peer={}, disconnecting", queuedBlock.hash.ToString(), pto->id);
                 pto->fDisconnect = true;
             }
         }
@@ -7490,13 +7490,13 @@ bool SendMessages(CNode* pto)
             for (CBlockIndex *pindex : vToDownload) {
                 vGetData.push_back(CInv(MSG_BLOCK, pindex->GetBlockHash()));
                 MarkBlockAsInFlight(pto->GetId(), pindex->GetBlockHash(), consensusParams, pindex);
-                LOG_INFO("Requesting block %s (%d) peer=%d\n", pindex->GetBlockHash().ToString(),
+                LOG_INFO("Requesting block {} ({}) peer={}", pindex->GetBlockHash().ToString(),
                     pindex->nHeight, pto->id);
             }
             if (state.nBlocksInFlight == 0 && staller != -1) {
                 if (State(staller)->nStallingSince == 0) {
                     State(staller)->nStallingSince = nNow;
-                    LOG_INFO("Stall started peer=%d\n", staller);
+                    LOG_INFO("Stall started peer={}", staller);
                 }
             }
         }
@@ -7508,15 +7508,15 @@ bool SendMessages(CNode* pto)
         if(!pto->mapAskFor.empty()) {
             nFirst = (*pto->mapAskFor.begin()).first;
         }
-        LOG_INFO("SendMessages (mapAskFor) -- before loop: nNow = %d, nFirst = %d\n", nNow, nFirst);
+        LOG_INFO("SendMessages (mapAskFor) -- before loop: nNow = {}, nFirst = {}", nNow, nFirst);
         while (!pto->fDisconnect && !pto->mapAskFor.empty() && (*pto->mapAskFor.begin()).first <= nNow)
         {
             const CInv& inv = (*pto->mapAskFor.begin()).second;
-            LOG_INFO("SendMessages (mapAskFor) -- inv = %s peer=%d\n", inv.ToString(), pto->id);
+            LOG_INFO("SendMessages (mapAskFor) -- inv = {} peer={}", inv.ToString(), pto->id);
             if (!AlreadyHave(inv))
             {
                 if (fDebug)
-                    LOG_INFO("Requesting %s peer=%d\n", inv.ToString(), pto->id);
+                    LOG_INFO("Requesting {} peer={}", inv.ToString(), pto->id);
                 vGetData.push_back(inv);
                 if (vGetData.size() >= 1000)
                 {
@@ -7525,7 +7525,7 @@ bool SendMessages(CNode* pto)
                 }
             } else {
                 //If we're not going to ask, don't expect a response.
-                LOG_INFO("SendMessages -- already have inv = %s peer=%d\n", inv.ToString(), pto->id);
+                LOG_INFO("SendMessages -- already have inv = {} peer={}", inv.ToString(), pto->id);
                 pto->setAskFor.erase(inv.hash);
             }
             pto->mapAskFor.erase(pto->mapAskFor.begin());
@@ -7645,7 +7645,7 @@ int VerifyDecodeClaimScript(const CScript& scriptIn, int& op, std::vector<std::v
 	std::regex reg( szReg );
 	bool b_r;
 	int i_times = m_vStringName.count(sName);
-	LOG_INFO("i_times is %d\n",i_times);
+	LOG_INFO("i_times is {}",i_times);
 
 	for ( m_it = m_vStringName.begin() ; m_it != m_vStringName.end() ; m_it++ )
 	{
@@ -7662,7 +7662,7 @@ int VerifyDecodeClaimScript(const CScript& scriptIn, int& op, std::vector<std::v
 	
 	if ( i_times == 0  )
 	{
-		LOG_INFO("txout.nValue is %d.%08d\n",txout.nValue/COIN,txout.nValue % COIN);
+		LOG_INFO("txout.nValue is {}.{:08d}\n",txout.nValue/COIN,txout.nValue % COIN);
 		b_r = std::regex_match( sName,reg);
 		if ( !b_r )
 		{

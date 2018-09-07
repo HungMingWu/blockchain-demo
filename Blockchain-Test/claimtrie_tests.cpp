@@ -21,7 +21,7 @@
 #include "policy/policy.h"
 #include "pow.h"
 #include "hash.h"
-
+#include "test_ulord.h"
 
 using namespace std;
 
@@ -118,7 +118,9 @@ bool CreateBlock(CBlockTemplate* pblocktemplate)
 		}
 	}
 	CValidationState state;
-	bool success = (ProcessNewBlock(state, chainparams, NULL, pblock, true, NULL) && state.IsValid() && pblock->GetHash() == chainActive.Tip()->GetBlockHash());
+	bool success = ProcessNewBlock(state, chainparams, NULL, pblock, true, NULL);
+	success = state.IsValid();
+	success = pblock->GetHash() == chainActive.Tip()->GetBlockHash();
 
 	pblock->hashPrevBlock = pblock->GetHash();
 	return success;
@@ -150,7 +152,7 @@ bool CreateCoinbases(unsigned int num_coinbases, std::vector<CTransaction>& coin
 	pblocktemplate->block.hashPrevBlock = chainActive.Tip()->GetBlockHash();
 	for (unsigned int i = 0; i < 100 + num_coinbases; ++i)
 	{
-		REQUIRE(CreateBlock(pblocktemplate));
+		REQUIRE(CreateBlock(pblocktemplate) == true);
 		if (coinbases.size() < num_coinbases)
 			coinbases.push_back(CTransaction(pblocktemplate->block.vtx[0]));
 	}
@@ -173,7 +175,7 @@ bool CreateBlocks(unsigned int num_blocks, unsigned int num_txs)
 	return true;
 }
 
-TEST_CASE("claimtrie_insert_update_claim", "[claimtrie]")
+TEST_CASE_METHOD(RegTestingSetup, "claimtrie_insert_update_claim", "[claimtrie]")
 {
 
 	fRequireStandard = false;
