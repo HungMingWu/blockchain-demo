@@ -95,7 +95,8 @@ string ScriptToAsmStr(const CScript& script, const bool fAttemptSighashDecode)
                     // this won't decode correctly formatted public keys in Pubkey or Multisig scripts due to
                     // the restrictions on the pubkey formats (see IsCompressedOrUncompressedPubKey) being incongruous with the
                     // checks in CheckSignatureEncoding.
-                    if (CheckSignatureEncoding(vch, SCRIPT_VERIFY_STRICTENC, NULL)) {
+					ScriptError error = CheckSignatureEncoding(vch, SCRIPT_VERIFY_STRICTENC);
+                    if (error == SCRIPT_ERR_OK) {
                         const unsigned char chSigHashType = vch.back();
                         if (mapSigHashTypes.count(chSigHashType)) {
                             strSigHashDecode = "[" + mapSigHashTypes.find(chSigHashType)->second + "]";

@@ -72,11 +72,11 @@ void RandAddSeedPerfmon()
     if (ret == ERROR_SUCCESS) {
         RAND_add(vData.data(), nSize, nSize / 100.0);
         memory_cleanse(vData.data(), nSize);
-		LOG_INFO("%s: %lu bytes\n", __func__, nSize);
+		LOG_INFO("{}: {} bytes", __func__, nSize);
     } else {
         static bool warned = false; // Warn only once
         if (!warned) {
-            LOG_INFO("%s: Warning: RegQueryValueExA(HKEY_PERFORMANCE_DATA) failed with code %i\n", __func__, ret);
+            LOG_INFO("{}: Warning: RegQueryValueExA(HKEY_PERFORMANCE_DATA) failed with code {}", __func__, ret);
             warned = true;
         }
     }

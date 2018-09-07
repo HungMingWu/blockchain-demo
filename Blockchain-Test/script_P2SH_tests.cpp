@@ -12,6 +12,7 @@
 #include "script/script.h"
 #include "script/script_error.h"
 #include "script/sign.h"
+#include "test_ulord.h"
 
 #ifdef ENABLE_WALLET
 #include "wallet/wallet_ismine.h"
@@ -29,8 +30,8 @@ Serialize(const CScript& s)
 	return sSerialized;
 }
 
-static bool
-Verify(const CScript& scriptSig, const CScript& scriptPubKey, bool fStrict, ScriptError& err)
+static ScriptError
+Verify(const CScript& scriptSig, const CScript& scriptPubKey, bool fStrict)
 {
 	// Create dummy to/from transactions:
 	CMutableTransaction txFrom;
@@ -45,10 +46,10 @@ Verify(const CScript& scriptSig, const CScript& scriptPubKey, bool fStrict, Scri
 	txTo.vin[0].scriptSig = scriptSig;
 	txTo.vout[0].nValue = 1;
 
-	return VerifyScript(scriptSig, scriptPubKey, fStrict ? SCRIPT_VERIFY_P2SH : SCRIPT_VERIFY_NONE, MutableTransactionSignatureChecker(&txTo, 0), &err);
+	return VerifyScript(scriptSig, scriptPubKey, fStrict ? SCRIPT_VERIFY_P2SH : SCRIPT_VERIFY_NONE, MutableTransactionSignatureChecker(&txTo, 0));
 }
 
-TEST_CASE("sign")
+TEST_CASE_METHOD(BasicTestingSetup, "sign")
 {
 	LOCK(cs_main);
 	// Pay-to-script-hash looks like this:
@@ -102,30 +103,26 @@ TEST_CASE("sign")
 		BOOST_CHECK_MESSAGE(IsMine(keystore, txFrom.vout[i].scriptPubKey), fmt::format("IsMine %d", i));
 #endif
 	}
-	for (int i = 0; i < 8; i++)
-	{
-		SECTION(fmt::format("SignSignature %d", i)) {
-			REQUIRE(SignSignature(keystore, txFrom, txTo[i], 0));
-		}
+	for (int i = 0; i < 8; i++) {
+		REQUIRE(SignSignature(keystore, txFrom, txTo[i], 0));
 	}
 	// All of the above should be OK, and the txTos have valid signatures
 	// Check to make sure signature verification fails if we use the wrong ScriptSig:
-	SECTION("VerifySignature") {
-		for (int i = 0; i < 8; i++)
-			for (int j = 0; j < 8; j++)
-			{
-				CScript sigSave = txTo[i].vin[0].scriptSig;
-				txTo[i].vin[0].scriptSig = txTo[j].vin[0].scriptSig;
-				bool sigOK = CScriptCheck(CCoins(txFrom, 0), txTo[i], 0, SCRIPT_VERIFY_P2SH | SCRIPT_VERIFY_STRICTENC, false)();
-				if (i == j) {
-					REQUIRE(sigOK);
-				}
-				else {
-					REQUIRE(!sigOK);
-				}
-				txTo[i].vin[0].scriptSig = sigSave;
+
+	for (int i = 0; i < 8; i++)
+		for (int j = 0; j < 8; j++)
+		{
+			CScript sigSave = txTo[i].vin[0].scriptSig;
+			txTo[i].vin[0].scriptSig = txTo[j].vin[0].scriptSig;
+			ScriptError sigOK = CScriptCheck(CCoins(txFrom, 0), txTo[i], 0, SCRIPT_VERIFY_P2SH | SCRIPT_VERIFY_STRICTENC, false).Verify();;
+			if (i == j) {
+				REQUIRE(sigOK == SCRIPT_ERR_OK);
 			}
-	}
+			else {
+				REQUIRE(sigOK != SCRIPT_ERR_OK);
+			}
+			txTo[i].vin[0].scriptSig = sigSave;
+		}
 }
 
 TEST_CASE("norecurse")
@@ -142,10 +139,9 @@ TEST_CASE("norecurse")
 	scriptSig << Serialize(invalidAsScript);
 
 	// Should not verify, because it will try to execute OP_INVALIDOPCODE
-	REQUIRE(!Verify(scriptSig, p2sh, true, err));
-	SECTION(ScriptErrorString(err)) {
-		REQUIRE(err == SCRIPT_ERR_BAD_OPCODE);
-	}
+	err = Verify(scriptSig, p2sh, true);
+	REQUIRE(err != SCRIPT_ERR_OK);
+	REQUIRE(err == SCRIPT_ERR_BAD_OPCODE);
 
 	// Try to recur, and verification should succeed because
 	// the inner HASH160 <> EQUAL should only check the hash:
@@ -153,13 +149,11 @@ TEST_CASE("norecurse")
 	CScript scriptSig2;
 	scriptSig2 << Serialize(invalidAsScript) << Serialize(p2sh);
 
-	REQUIRE(Verify(scriptSig2, p2sh2, true, err));
-	SECTION(ScriptErrorString(err)) {
-		REQUIRE(err == SCRIPT_ERR_OK);
-	}
+	err = Verify(scriptSig2, p2sh2, true);
+	REQUIRE(err == SCRIPT_ERR_OK);
 }
 
-TEST_CASE("set")
+TEST_CASE_METHOD(BasicTestingSetup, "set")
 {
 	LOCK(cs_main);
 	// Test the CScript::Set* methods
@@ -211,12 +205,8 @@ TEST_CASE("set")
 	}
 	for (int i = 0; i < 4; i++)
 	{
-		SECTION(fmt::format("SignSignature %d", i)) {
-			REQUIRE(SignSignature(keystore, txFrom, txTo[i], 0));
-		}
-		SECTION(fmt::format("txTo[%d].IsStandard", i)) {
-			REQUIRE(IsStandardTx(txTo[i], reason));
-		}
+		REQUIRE(SignSignature(keystore, txFrom, txTo[i], 0));
+		REQUIRE(IsStandardTx(txTo[i], reason));
 	}
 }
 
@@ -264,18 +254,15 @@ TEST_CASE("switchover")
 
 
 	// Validation should succeed under old rules (hash is correct):
-	REQUIRE(Verify(scriptSig, fund, false, err));
-	SECTION(ScriptErrorString(err)) {
-		REQUIRE(err == SCRIPT_ERR_OK);
-	}
+	err = Verify(scriptSig, fund, false);
+	REQUIRE(err == SCRIPT_ERR_OK);
 	// Fail under new:
-	REQUIRE(!Verify(scriptSig, fund, true, err));
-	SECTION(ScriptErrorString(err)) {
-		REQUIRE(err == SCRIPT_ERR_EQUALVERIFY);
-	}
+	err = Verify(scriptSig, fund, true);
+	REQUIRE(err != SCRIPT_ERR_OK);
+	REQUIRE(err == SCRIPT_ERR_EQUALVERIFY);
 }
 
-TEST_CASE("AreInputsStandard")
+TEST_CASE_METHOD(BasicTestingSetup, "AreInputsStandard")
 {
 	LOCK(cs_main);
 	CCoinsView coinsDummy;

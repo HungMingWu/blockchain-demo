@@ -119,8 +119,10 @@ private:
             }
             // execute work
             for (T& check : vChecks)
-                if (fOk)
-                    fOk = check();
+				if (fOk) {
+					auto result = check.Verify();
+					fOk = (result == SCRIPT_ERR_OK);
+				}
             vChecks.clear();
         } while (true);
     }

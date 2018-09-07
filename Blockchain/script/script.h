@@ -452,7 +452,7 @@ public:
         {
             insert(end(), OP_PUSHDATA2);
             uint8_t data[2];
-			*(uint32_t *)(data) = htole16(b.size());
+			*(uint16_t *)(data) = htole16(b.size());
             insert(end(), data, data + sizeof(data));
         }
         else

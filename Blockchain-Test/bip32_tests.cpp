@@ -11,7 +11,7 @@
 #include "uint256.h"
 #include "util.h"
 #include "utilstrencodings.h"
-
+#include "test_ulord.h"
 
 using namespace std;
 
@@ -123,10 +123,10 @@ void RunTest(const TestVector &test) {
 	}
 }
 
-TEST_CASE("bip32_test1") {
+TEST_CASE_METHOD(BasicTestingSetup, "bip32_test1") {
 	RunTest(test1);
 }
 
-TEST_CASE("bip32_test2") {
+TEST_CASE_METHOD(BasicTestingSetup, "bip32_test2") {
 	RunTest(test2);
 }

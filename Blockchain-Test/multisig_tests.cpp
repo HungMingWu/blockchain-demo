@@ -12,6 +12,7 @@
 #include "script/interpreter.h"
 #include "script/sign.h"
 #include "uint256.h"
+#include "test_ulord.h"
 
 #ifdef ENABLE_WALLET
 #include "wallet/wallet_ismine.h"
@@ -38,7 +39,7 @@ sign_multisig(CScript scriptPubKey, vector<CKey> keys, CTransaction transaction,
 	return result;
 }
 
-TEST_CASE("multisig_verify")
+TEST_CASE_METHOD(BasicTestingSetup, "multisig_verify")
 {
 	unsigned int flags = SCRIPT_VERIFY_P2SH | SCRIPT_VERIFY_STRICTENC;
 
@@ -79,23 +80,23 @@ TEST_CASE("multisig_verify")
 	keys.assign(1, key[0]);
 	keys.push_back(key[1]);
 	s = sign_multisig(a_and_b, keys, txTo[0], 0);
-	REQUIRE(VerifyScript(s, a_and_b, flags, MutableTransactionSignatureChecker(&txTo[0], 0), &err));
-	SECTION(ScriptErrorString(err)) {
-		REQUIRE(err == SCRIPT_ERR_OK);
-	}
+	err = VerifyScript(s, a_and_b, flags, MutableTransactionSignatureChecker(&txTo[0], 0));
+	REQUIRE(err == SCRIPT_ERR_OK);
 
 	SECTION("a&b") {
 		for (int i = 0; i < 4; i++)
 		{
 			keys.assign(1, key[i]);
 			s = sign_multisig(a_and_b, keys, txTo[0], 0);
-			REQUIRE(!VerifyScript(s, a_and_b, flags, MutableTransactionSignatureChecker(&txTo[0], 0), &err));
+			err = VerifyScript(s, a_and_b, flags, MutableTransactionSignatureChecker(&txTo[0], 0));
+			REQUIRE(err != SCRIPT_ERR_OK);
 			REQUIRE(err == SCRIPT_ERR_INVALID_STACK_OPERATION);
 
 			keys.assign(1, key[1]);
 			keys.push_back(key[i]);
 			s = sign_multisig(a_and_b, keys, txTo[0], 0);
-			REQUIRE(!VerifyScript(s, a_and_b, flags, MutableTransactionSignatureChecker(&txTo[0], 0), &err));
+			err = VerifyScript(s, a_and_b, flags, MutableTransactionSignatureChecker(&txTo[0], 0));
+			REQUIRE(err != SCRIPT_ERR_OK);
 			REQUIRE(err == SCRIPT_ERR_EVAL_FALSE);
 		}
 	}
@@ -108,22 +109,21 @@ TEST_CASE("multisig_verify")
 			s = sign_multisig(a_or_b, keys, txTo[1], 0);
 			if (i == 0 || i == 1)
 			{
-				REQUIRE(VerifyScript(s, a_or_b, flags, MutableTransactionSignatureChecker(&txTo[1], 0), &err));
+				err = VerifyScript(s, a_or_b, flags, MutableTransactionSignatureChecker(&txTo[1], 0));
 				REQUIRE(err == SCRIPT_ERR_OK);
 			}
 			else
 			{
-				REQUIRE(!VerifyScript(s, a_or_b, flags, MutableTransactionSignatureChecker(&txTo[1], 0), &err));
+				err = VerifyScript(s, a_or_b, flags, MutableTransactionSignatureChecker(&txTo[1], 0));
+				REQUIRE(err != SCRIPT_ERR_OK);
 				REQUIRE(err == SCRIPT_ERR_EVAL_FALSE);
 			}
 		}
 	}
 	s.clear();
 	s << OP_0 << OP_1;
-	REQUIRE(!VerifyScript(s, a_or_b, flags, MutableTransactionSignatureChecker(&txTo[1], 0), &err));
-	SECTION(ScriptErrorString(err)) {
-		REQUIRE(err == SCRIPT_ERR_SIG_DER);
-	}
+	err = VerifyScript(s, a_or_b, flags, MutableTransactionSignatureChecker(&txTo[1], 0));
+	REQUIRE(err == SCRIPT_ERR_SIG_DER);
 
 	SECTION("escrow") {
 		for (int i = 0; i < 4; i++)
@@ -134,19 +134,20 @@ TEST_CASE("multisig_verify")
 				s = sign_multisig(escrow, keys, txTo[2], 0);
 				if (i < j && i < 3 && j < 3)
 				{
-					REQUIRE(VerifyScript(s, escrow, flags, MutableTransactionSignatureChecker(&txTo[2], 0), &err));
+					err = VerifyScript(s, escrow, flags, MutableTransactionSignatureChecker(&txTo[2], 0));
 					REQUIRE(err == SCRIPT_ERR_OK);
 				}
 				else
 				{
-					REQUIRE(!VerifyScript(s, escrow, flags, MutableTransactionSignatureChecker(&txTo[2], 0), &err));
+					err = VerifyScript(s, escrow, flags, MutableTransactionSignatureChecker(&txTo[2], 0));
+					REQUIRE(err != SCRIPT_ERR_OK);
 					REQUIRE(err == SCRIPT_ERR_EVAL_FALSE);
 				}
 			}
 	}
 }
 
-TEST_CASE("multisig_IsStandard")
+TEST_CASE_METHOD(BasicTestingSetup, "multisig_IsStandard")
 {
 	CKey key[4];
 	for (int i = 0; i < 4; i++)
@@ -182,7 +183,7 @@ TEST_CASE("multisig_IsStandard")
 		REQUIRE(!::IsStandard(malformed[i], whichType));
 }
 
-TEST_CASE("multisig_Solver1")
+TEST_CASE_METHOD(BasicTestingSetup, "multisig_Solver1")
 {
 	// Tests Solver() that returns lists of keys that are
 	// required to satisfy a ScriptPubKey
@@ -279,7 +280,7 @@ TEST_CASE("multisig_Solver1")
 	}
 }
 
-TEST_CASE("multisig_Sign")
+TEST_CASE_METHOD(BasicTestingSetup, "multisig_Sign")
 {
 	// Test SignSignature() (and therefore the version of Solver() that signs transactions)
 	CBasicKeyStore keystore;

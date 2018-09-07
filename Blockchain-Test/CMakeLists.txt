@@ -12,7 +12,7 @@ set(TEST_SRCS
 	#merkle_tests.cpp
 	base32_tests.cpp # TestOK
 	base64_tests.cpp # TestOK
-	#bip32_tests.cpp
+	bip32_tests.cpp # TestOK
 	bloom_tests.cpp # TestOK
 	cachemap_tests.cpp # TestOK
 	cachemultimap_tests.cpp # TestOK
@@ -21,30 +21,30 @@ set(TEST_SRCS
 	compress_tests.cpp # TestOK
 	#getarg_tests.cpp
 	hash_tests.cpp # TestOK
-	#key_tests.cpp
+	key_tests.cpp # TestOK
 	limitedmap_tests.cpp # TestOK
-	#main_tests.cpp
-	#mempool_tests.cpp
+	main_tests.cpp # TestOK
+	mempool_tests.cpp # TestOK
 	#miner_tests.cpp
-	#multisig_tests.cpp
+	multisig_tests.cpp # TestOK
 	#netbase_tests.cpp
 	pmt_tests.cpp # TestOK
-	#policyestimator_tests.cpp
-	#pow_tests.cpp
-	#prevector_tests.cpp
+	policyestimator_tests.cpp # TestOK
+	pow_tests.cpp # TestOK
+	prevector_tests.cpp # TestOK
 	ratecheck_tests.cpp # TestOK
 	reverselock_tests.cpp # TestOK
 	# rpc_tests.cpp
 	# rpc_wallet_tests.cpp
 	#sanity_tests.cpp
 	#scheduler_tests.cpp
-	#script_P2PKH_tests.cpp
-	#script_P2SH_tests.cpp
-	# script_tests.cpp
-	#scriptnum_tests.cpp
+	script_P2PKH_tests.cpp # TestOK
+	script_P2SH_tests.cpp # TestOK
+	#script_tests.cpp
+	scriptnum_tests.cpp # TestOK
 	#serialize_tests.cpp
 	# sighash_tests.cpp
-	#sigopcount_tests.cpp
+	sigopcount_tests.cpp # TestOK
 	skiplist_tests.cpp # TestOK
 	streams_tests.cpp # TestOK
 	timedata_tests.cpp # TestOK
@@ -53,7 +53,7 @@ set(TEST_SRCS
 	uint256_tests.cpp # TestOK
 	util_tests.cpp  # TestOK
 	versionbits_tests.cpp # TestOK
-	#Checkpoints_tests.cpp
+	Checkpoints_tests.cpp # TestOK
 	#DoS_tests.cpp
 	test_ulord.cpp
 )

@@ -2145,12 +2145,10 @@ void UpdateCoins(const CTransaction& tx, CValidationState &state, CCoinsViewCach
     UpdateCoins(tx, state, inputs, txundo, nHeight);
 }
 
-bool CScriptCheck::operator()() {
+ScriptError CScriptCheck::Verify() {
     const CScript &scriptSig = ptxTo->vin[nIn].scriptSig;
-    if (!VerifyScript(scriptSig, scriptPubKey, nFlags, CachingTransactionSignatureChecker(ptxTo, nIn, cacheStore), &error)) {
-        return false;
-    }
-    return true;
+	auto checker = CachingTransactionSignatureChecker(ptxTo, nIn, cacheStore);
+	return VerifyScript(scriptSig, scriptPubKey, nFlags, checker);
 }
 
 int GetSpendHeight(const CCoinsViewCache& inputs)
@@ -2242,10 +2240,11 @@ bool CheckInputs(const CTransaction& tx, CValidationState &state, const CCoinsVi
 
                 // Verify signature
                 CScriptCheck check(*coins, tx, i, flags, cacheStore);
+				ScriptError error;
                 if (pvChecks) {
                     pvChecks->push_back(CScriptCheck());
                     check.swap(pvChecks->back());
-                } else if (!check()) {
+                } else if ((error = check.Verify()) != SCRIPT_ERR_OK) {
                     if (flags & STANDARD_NOT_MANDATORY_VERIFY_FLAGS) {
                         // Check whether the failure was caused by a
                         // non-mandatory script verification check, such as
@@ -2255,8 +2254,9 @@ bool CheckInputs(const CTransaction& tx, CValidationState &state, const CCoinsVi
                         // non-upgraded nodes.
                         CScriptCheck check2(*coins, tx, i,
                                 flags & ~STANDARD_NOT_MANDATORY_VERIFY_FLAGS, cacheStore);
-                        if (check2()) {
-                            state.Invalid(REJECT_NONSTANDARD, fmt::format("non-mandatory-script-verify-flag (%s)", ScriptErrorString(check.GetScriptError())));
+						error = check2.Verify();
+                        if (error != SCRIPT_ERR_OK) {
+                            state.Invalid(REJECT_NONSTANDARD, fmt::format("non-mandatory-script-verify-flag ({})", ScriptErrorString(error)));
                             return false;
                         }
                     }
@@ -2267,7 +2267,7 @@ bool CheckInputs(const CTransaction& tx, CValidationState &state, const CCoinsVi
                     // as to the correct behavior - we may want to continue
                     // peering with non-upgraded nodes even after a soft-fork
                     // super-majority vote has passed.
-                    state.DoS(100, REJECT_INVALID, fmt::format("mandatory-script-verify-flag-failed (%s)", ScriptErrorString(check.GetScriptError())));
+                    state.DoS(100, REJECT_INVALID, fmt::format("mandatory-script-verify-flag-failed (%s)", ScriptErrorString(error)));
                     return false;
                 }
             }

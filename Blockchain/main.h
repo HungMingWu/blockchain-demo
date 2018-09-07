@@ -707,15 +707,14 @@ private:
     unsigned int nIn;
     unsigned int nFlags;
     bool cacheStore;
-    ScriptError error;
 
 public:
-    CScriptCheck(): ptxTo(0), nIn(0), nFlags(0), cacheStore(false), error(SCRIPT_ERR_UNKNOWN_ERROR) {}
+    CScriptCheck(): ptxTo(0), nIn(0), nFlags(0), cacheStore(false) {}
     CScriptCheck(const CCoins& txFromIn, const CTransaction& txToIn, unsigned int nInIn, unsigned int nFlagsIn, bool cacheIn) :
         scriptPubKey(txFromIn.vout[txToIn.vin[nInIn].prevout.n].scriptPubKey),
-        ptxTo(&txToIn), nIn(nInIn), nFlags(nFlagsIn), cacheStore(cacheIn), error(SCRIPT_ERR_UNKNOWN_ERROR) { }
+        ptxTo(&txToIn), nIn(nInIn), nFlags(nFlagsIn), cacheStore(cacheIn) { }
 
-    bool operator()();
+	ScriptError Verify();
 
     void swap(CScriptCheck &check) {
         scriptPubKey.swap(check.scriptPubKey);
@@ -723,10 +722,7 @@ public:
         std::swap(nIn, check.nIn);
         std::swap(nFlags, check.nFlags);
         std::swap(cacheStore, check.cacheStore);
-        std::swap(error, check.error);
     }
-
-    ScriptError GetScriptError() const { return error; }
 };
 
 bool GetTimestampIndex(const unsigned int &high, const unsigned int &low, std::vector<uint256> &hashes);
