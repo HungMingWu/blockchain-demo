@@ -2,6 +2,7 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#include <vector>
 #include <catch2/catch.hpp>
 
 #include "pubkey.h"
@@ -9,9 +10,7 @@
 #include "script/script.h"
 #include "script/standard.h"
 #include "uint256.h"
-#include <vector>
-
-
+#include "test_ulord.h"
 
 using namespace std;
 
@@ -23,7 +22,7 @@ Serialize(const CScript& s)
 	return sSerialized;
 }
 
-TEST_CASE("GetSigOpCount")
+TEST_CASE_METHOD(BasicTestingSetup, "GetSigOpCount")
 {
 	// Test CScript::GetSigOpCount()
 	CScript s1;

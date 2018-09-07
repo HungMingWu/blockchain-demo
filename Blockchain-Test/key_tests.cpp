@@ -13,7 +13,7 @@
 #include "uint256.h"
 #include "util.h"
 #include "utilstrencodings.h"
-
+#include "test_ulord.h"
 
 using namespace std;
 
@@ -57,7 +57,7 @@ void dumpKeyInfo(uint256 privkey)
 }
 #endif
 
-TEST_CASE("key_test1")
+TEST_CASE_METHOD(BasicTestingSetup, "key_test1")
 {
 	SelectParams(CBaseChainParams::MAIN);
 

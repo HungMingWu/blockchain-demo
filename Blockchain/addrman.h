@@ -419,7 +419,7 @@ public:
             }
         }
         if (nLost + nLostUnk > 0) {
-            LOG_INFO("addrman lost %i new and %i tried addresses due to collisions\n", nLostUnk, nLost);
+            LOG_INFO("addrman lost {} new and {} tried addresses due to collisions", nLostUnk, nLost);
         }
 
         Check();
@@ -474,7 +474,7 @@ public:
             LOCK(cs);
             int err;
             if ((err=Check_()))
-                LOG_INFO("ADDRMAN CONSISTENCY CHECK FAILED!!! err=%i\n", err);
+                LOG_INFO("ADDRMAN CONSISTENCY CHECK FAILED!!! err={}", err);
         }
 #endif
     }
@@ -490,7 +490,7 @@ public:
             Check();
         }
         if (fRet)
-            LOG_INFO("Added {} from {}: {} tried, {} new\n", addr.ToStringIPPort(), source.ToString(), nTried, nNew);
+            LOG_INFO("Added {} from {}: {} tried, {} new", addr.ToStringIPPort(), source.ToString(), nTried, nNew);
         return fRet;
     }
 
@@ -506,7 +506,7 @@ public:
             Check();
         }
         if (nAdd)
-            LOG_INFO("Added %i addresses from %s: %i tried, %i new\n", nAdd, source.ToString(), nTried, nNew);
+            LOG_INFO("Added %i addresses from %s: %i tried, %i new", nAdd, source.ToString(), nTried, nNew);
         return nAdd > 0;
     }
 
