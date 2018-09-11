@@ -943,8 +943,8 @@ void CWallet::MarkConflicted(const uint256& hashBlock, const uint256& hashTx)
 
     int conflictconfirms = 0;
     if (mapBlockIndex.count(hashBlock)) {
-        auto &pindex = mapBlockIndex[hashBlock];
-        if (chainActive.Contains(pindex.get())) {
+        auto pindex = nonstd::make_observer(mapBlockIndex[hashBlock].get());
+        if (chainActive.Contains(pindex)) {
             conflictconfirms = -(chainActive.Height() - pindex->nHeight + 1);
         }
     }
@@ -1446,13 +1446,13 @@ bool CWalletTx::WriteToDisk(CWalletDB *pwalletdb)
  * from or to us. If fUpdate is true, found transactions that already
  * exist in the wallet will be updated.
  */
-int CWallet::ScanForWalletTransactions(CBlockIndex* pindexStart, bool fUpdate)
+int CWallet::ScanForWalletTransactions(nonstd::observer_ptr<CBlockIndex> pindexStart, bool fUpdate)
 {
     int ret = 0;
     int64_t nNow = GetTime();
     const CChainParams& chainParams = Params();
 
-    CBlockIndex* pindex = pindexStart;
+    auto pindex = pindexStart;
     {
         LOCK2(cs_main, cs_wallet);
 
@@ -4762,13 +4762,13 @@ void CWallet::GetKeyBirthTimes(std::map<CKeyID, int64_t> &mapKeyBirth) const {
             mapKeyBirth[it->first] = it->second.nCreateTime;
 
     // map in which we'll infer heights of other keys
-    CBlockIndex *pindexMax = chainActive[std::max(0, chainActive.Height() - 144)]; // the tip can be reorganised; use a 144-block safety margin
+    auto pindexMax = chainActive[std::max(0, chainActive.Height() - 144)]; // the tip can be reorganised; use a 144-block safety margin
     std::map<CKeyID, CBlockIndex*> mapKeyFirstBlock;
     std::set<CKeyID> setKeys;
     GetKeys(setKeys);
     for (const CKeyID &keyid : setKeys) {
         if (mapKeyBirth.count(keyid) == 0)
-            mapKeyFirstBlock[keyid] = pindexMax;
+            mapKeyFirstBlock[keyid] = pindexMax.get();
     }
     setKeys.clear();
 
@@ -4782,7 +4782,7 @@ void CWallet::GetKeyBirthTimes(std::map<CKeyID, int64_t> &mapKeyBirth) const {
         // iterate over all wallet transactions...
         const CWalletTx &wtx = (*it).second;
         BlockMap::const_iterator blit = mapBlockIndex.find(wtx.hashBlock);
-        if (blit != mapBlockIndex.end() && chainActive.Contains(blit->second.get())) {
+        if (blit != mapBlockIndex.end() && chainActive.Contains(nonstd::make_observer(blit->second.get()))) {
             // ... which are already in a block
             int nHeight = blit->second->nHeight;
             for (const CTxOut &txout : wtx.vout) {
@@ -4886,8 +4886,8 @@ int CMerkleTx::SetMerkleBranch(const CBlock& block)
     auto it = mapBlockIndex.find(hashBlock);
     if (it == end(mapBlockIndex))
         return 0;
-    auto &pindex = it->second;
-    if (!pindex || !chainActive.Contains(pindex.get()))
+    auto pindex = nonstd::make_observer(it->second.get());
+    if (!pindex || !chainActive.Contains(pindex))
         return 0;
 
     return chainActive.Height() - pindex->nHeight + 1;
@@ -4907,8 +4907,8 @@ int CMerkleTx::GetDepthInMainChain(const CBlockIndex* &pindexRet, bool enableIX)
         if (it == end(mapBlockIndex))
             nResult = 0;
         else {
-            auto &pindex = it->second;
-            if (!pindex || !chainActive.Contains(pindex.get()))
+            auto pindex = nonstd::make_observer(it->second.get());
+            if (!pindex || !chainActive.Contains(pindex))
                 nResult = 0;
             else {
                 pindexRet = pindex.get();

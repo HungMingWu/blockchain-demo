@@ -224,7 +224,7 @@ private:
     static const std::string SERIALIZATION_VERSION_STRING;
 
     // Keep track of current block index
-    const CBlockIndex *pCurrentBlockIndex;
+    nonstd::observer_ptr<const CBlockIndex> pCurrentBlockIndex;
 
     int64_t nTimeLastDiff;
     int nCachedBlockHeight;
@@ -336,7 +336,7 @@ public:
         }
     }
 
-    void UpdatedBlockTip(const CBlockIndex *pindex);
+    void UpdatedBlockTip(nonstd::observer_ptr<const CBlockIndex> pindex);
     int64_t GetLastDiffTime() { return nTimeLastDiff; }
     void UpdateLastDiffTime(int64_t nTimeIn) { nTimeLastDiff = nTimeIn; }
 

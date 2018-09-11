@@ -1580,7 +1580,7 @@ void CMasternodeMan::UpdateLastPaid()
     //                         pCurrentBlockIndex->nHeight, nMaxBlocksToScanBack, IsFirstRun ? "true" : "false");
 
     for (CMasternode& mn : vMasternodes) {
-        mn.UpdateLastPaid(pCurrentBlockIndex, nMaxBlocksToScanBack);
+        mn.UpdateLastPaid(pCurrentBlockIndex.get(), nMaxBlocksToScanBack);
     }
 
     // every time is like the first time if winners list is not synced
@@ -1708,7 +1708,7 @@ void CMasternodeMan::SetMasternodeLastPing(const CTxIn& vin, const CMasternodePi
     }
 }
 
-void CMasternodeMan::UpdatedBlockTip(const CBlockIndex *pindex)
+void CMasternodeMan::UpdatedBlockTip(nonstd::observer_ptr<const CBlockIndex >pindex)
 {
     pCurrentBlockIndex = pindex;
     LOG_INFO("CMasternodeMan::UpdatedBlockTip -- pCurrentBlockIndex->nHeight=%d\n", pCurrentBlockIndex->nHeight);

@@ -810,7 +810,7 @@ bool CMasternodeBroadcast::CheckOutpoint(int& nDos)
         auto mi = mapBlockIndex.find(*hashBlock);
         if (mi != end(mapBlockIndex) && (*mi).second) {
             auto &pMNIndex = (*mi).second; // block for 10000 UT tx -> 1 confirmation
-            CBlockIndex* pConfIndex = chainActive[pMNIndex->nHeight + Params().GetConsensus().nMasternodeMinimumConfirmations - 1]; // block where tx got nMasternodeMinimumConfirmations
+            auto pConfIndex = chainActive[pMNIndex->nHeight + Params().GetConsensus().nMasternodeMinimumConfirmations - 1]; // block where tx got nMasternodeMinimumConfirmations
             if(pConfIndex->GetBlockTime() > sigTime) {
                 LOG_INFO("CMasternodeBroadcast::CheckOutpoint -- Bad sigTime %d (%d conf block is at %d) for Masternode %s %s\n",
                           sigTime, Params().GetConsensus().nMasternodeMinimumConfirmations, pConfIndex->GetBlockTime(), vin.prevout.ToStringShort(), addr.ToString());

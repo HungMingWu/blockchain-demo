@@ -2453,7 +2453,7 @@ void CPrivSendPool::SetState(PoolState nStateNew)
     nState = nStateNew;
 }
 
-void CPrivSendPool::UpdatedBlockTip(const CBlockIndex *pindex)
+void CPrivSendPool::UpdatedBlockTip(nonstd::observer_ptr<const CBlockIndex> pindex)
 {
     pCurrentBlockIndex = pindex;
     LOG_INFO("CPrivSendPool::UpdatedBlockTip -- pCurrentBlockIndex->nHeight: %d\n", pCurrentBlockIndex->nHeight);

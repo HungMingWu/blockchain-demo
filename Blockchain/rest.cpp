@@ -141,9 +141,9 @@ static bool rest_headers(HTTPRequest* req,
     {
         LOCK(cs_main);
         BlockMap::const_iterator it = mapBlockIndex.find(hash);
-        CBlockIndex *pindex = (it != mapBlockIndex.end()) ? it->second.get() : NULL;
+        nonstd::observer_ptr<CBlockIndex> pindex = (it != mapBlockIndex.end()) ? nonstd::make_observer(it->second.get()) : nullptr;
         while (pindex != NULL && chainActive.Contains(pindex)) {
-            headers.push_back(pindex);
+            headers.push_back(pindex.get());
             if (headers.size() == (unsigned long)count)
                 break;
             pindex = chainActive.Next(pindex);

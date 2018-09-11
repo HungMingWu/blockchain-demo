@@ -11,13 +11,14 @@ namespace Consensus {
 }
 
 #include <stdint.h>
+#include "observer_ptr.h"
 
 class CBlockHeader;
 class CBlockIndex;
 class uint256;
 class arith_uint256;
 
-unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHeader *pblock, const Consensus::Params&);
+unsigned int GetNextWorkRequired(nonstd::observer_ptr<const CBlockIndex> pindexLast, const CBlockHeader *pblock, const Consensus::Params&);
 unsigned int CalculateNextWorkRequired(arith_uint256 bnAvg,
                                        int64_t nLastBlockTime, int64_t nFirstBlockTime,
                                        const Consensus::Params&);

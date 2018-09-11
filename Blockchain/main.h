@@ -33,6 +33,7 @@
 #include <vector>
 #include <string>
 #include <boost/optional.hpp>
+#include "observer_ptr.h"
 
 class CBlockIndex;
 class CBlockTreeDB;
@@ -170,7 +171,7 @@ extern bool fEnableReplacement;
 extern std::map<uint256, int64_t> mapRejectedBlocks;
 
 /** Best header we've seen so far (used for getheaders queries' starting points). */
-extern CBlockIndex *pindexBestHeader;
+extern nonstd::observer_ptr<CBlockIndex> pindexBestHeader;
 
 /** Minimum disk space required - used in CheckDiskSpace() */
 static const uint64_t nMinDiskSpace = 52428800;
@@ -257,7 +258,7 @@ bool IsInitialBlockDownload();
 std::string GetWarnings(const std::string& strFor);
 
 /** Get a cryptographic proof that a name maps to a value **/
-bool GetProofForName(const CBlockIndex* pindexProof, const std::string& name, CClaimTrieProof& proof);
+bool GetProofForName(nonstd::observer_ptr<const CBlockIndex> pindexProof, const std::string& name, CClaimTrieProof& proof);
 
 /** Retrieve a transaction (from memory pool, or from disk, if possible) */
 using TractactionTuple = std::tuple<boost::optional<CTransaction>, boost::optional<uint256>>;
@@ -828,10 +829,10 @@ public:
 };
 
 /** Find the last common block between the parameter chain and a locator. */
-CBlockIndex* FindForkInGlobalIndex(const CChain& chain, const CBlockLocator& locator);
+nonstd::observer_ptr<CBlockIndex> FindForkInGlobalIndex(const CChain& chain, const CBlockLocator& locator);
 
 /** Mark a block as invalid. */
-CValidationState InvalidateBlock(const Consensus::Params& consensusParams, CBlockIndex *pindex);
+CValidationState InvalidateBlock(const Consensus::Params& consensusParams, nonstd::observer_ptr<CBlockIndex> pindex);
 
 /** Remove invalidity status from a block and its descendants. */
 bool ReconsiderBlock(CValidationState& state, CBlockIndex *pindex);

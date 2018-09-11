@@ -5,12 +5,13 @@
 #ifndef MASTERNODEMAN_H
 #define MASTERNODEMAN_H
 
-#include "masternode.h"
-#include "sync.h"
-
 #include <boost/archive/binary_iarchive.hpp>
 #include <boost/archive/binary_oarchive.hpp>
 #include <boost/optional.hpp>
+
+#include "masternode.h"
+#include "sync.h"
+#include "observer_ptr.h"
 
 using namespace std;
 
@@ -100,7 +101,7 @@ private:
     mutable CCriticalSection cs;
 
     // Keep track of current block index
-    const CBlockIndex *pCurrentBlockIndex;
+    nonstd::observer_ptr<const CBlockIndex> pCurrentBlockIndex;
 
     // map to hold all MNs
     std::vector<CMasternode> vMasternodes;
@@ -341,7 +342,7 @@ public:
     bool IsMasternodePingedWithin(const CTxIn& vin, int nSeconds, int64_t nTimeToCheckAt = -1);
     void SetMasternodeLastPing(const CTxIn& vin, const CMasternodePing& mnp);
 
-    void UpdatedBlockTip(const CBlockIndex *pindex);
+    void UpdatedBlockTip(nonstd::observer_ptr<const CBlockIndex> pindex);
 
     /**
      * Called to notify CGovernanceManager that the masternode index has been updated.

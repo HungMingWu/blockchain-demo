@@ -29,6 +29,7 @@
 #include "crypter.h"
 #include "wallet_ismine.h"
 #include "walletdb.h"
+#include "../observer_ptr.h"
 
 /**
  * Settings
@@ -741,7 +742,7 @@ public:
     bool AddToWallet(const CWalletTx& wtxIn, bool fFromLoadWallet, CWalletDB* pwalletdb);
     void SyncTransaction(const CTransaction& tx, const CBlock* pblock);
     bool AddToWalletIfInvolvingMe(const CTransaction& tx, const CBlock* pblock, bool fUpdate);
-    int ScanForWalletTransactions(CBlockIndex* pindexStart, bool fUpdate = false);
+    int ScanForWalletTransactions(nonstd::observer_ptr<CBlockIndex> pindexStart, bool fUpdate = false);
     void ReacceptWalletTransactions();
     void ResendWalletTransactions(int64_t nBestBlockTime);
     std::vector<uint256> ResendWalletTransactionsBefore(int64_t nTime);

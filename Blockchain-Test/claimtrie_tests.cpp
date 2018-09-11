@@ -130,8 +130,8 @@ bool RemoveBlock(uint256& blockhash)
 {
 	if (mapBlockIndex.count(blockhash) == 0)
 		return false;
-	auto &pblockindex = mapBlockIndex[blockhash];
-	CValidationState state = InvalidateBlock(Params().GetConsensus(), pblockindex.get());
+	auto pblockindex = nonstd::make_observer(mapBlockIndex[blockhash].get());
+	CValidationState state = InvalidateBlock(Params().GetConsensus(), pblockindex);
 	if (state.IsValid())
 	{
 		state = ActivateBestChain(Params());
@@ -320,7 +320,7 @@ TEST_CASE_METHOD(RegTestingSetup, "claimtrie_insert_update_claim", "[claimtrie]"
 	nonstd::observer_ptr<CBlockIndex> pindexState(chainActive.Tip());
 	CValidationState state;
 	nonstd::observer_ptr<CBlockIndex> pindex;
-	for (pindex.reset(chainActive.Tip()); pindex && pindex->pprev; pindex = pindex->pprev)
+	for (pindex = chainActive.Tip(); pindex && pindex->pprev; pindex = pindex->pprev)
 	{
 		Opt<CBlock> block = ReadBlockFromDisk(*pindex, Params().GetConsensus());
 		REQUIRE(bool(block));
@@ -331,12 +331,12 @@ TEST_CASE_METHOD(RegTestingSetup, "claimtrie_insert_update_claim", "[claimtrie]"
 			pindexState = pindex->pprev;
 		}
 	}
-	while (pindex.get() != chainActive.Tip())
+	while (pindex != chainActive.Tip())
 	{
-		pindex.reset(chainActive.Next(pindex.get()));
+		pindex = chainActive.Next(pindex);
 		Opt<CBlock> block = ReadBlockFromDisk(*pindex, Params().GetConsensus());
 		REQUIRE(bool(block));
-		state = ConnectBlock(*block, pindex, coins, trieCache);
+		state = ConnectBlock(*block, pindex.get(), coins, trieCache);
 		REQUIRE(state.IsValid());
 	}
 

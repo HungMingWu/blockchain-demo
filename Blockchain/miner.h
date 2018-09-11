@@ -7,7 +7,7 @@
 #define BITCOIN_MINER_H
 
 #include "primitives/block.h"
-
+#include "observer_ptr.h"
 #include <stdint.h>
 
 class CBlockIndex;
@@ -34,7 +34,7 @@ void GenerateBitcoins(bool fGenerate, int nThreads, const CChainParams& chainpar
 /** Generate a new block, without valid proof-of-work */
 std::unique_ptr<CBlockTemplate> CreateNewBlock(const CChainParams& chainparams, const CScript& scriptPubKeyIn);
 /** Modify the extranonce in a block */
-void IncrementExtraNonce(CBlock* pblock, const CBlockIndex* pindexPrev, unsigned int& nExtraNonce);
+void IncrementExtraNonce(CBlock* pblock, nonstd::observer_ptr<const CBlockIndex> pindexPrev, unsigned int& nExtraNonce);
 int64_t UpdateTime(CBlockHeader* pblock, const Consensus::Params& consensusParams, const CBlockIndex* pindexPrev);
 
 #endif // BITCOIN_MINER_H

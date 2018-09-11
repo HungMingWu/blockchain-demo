@@ -6,6 +6,7 @@
 
 #include "chain.h"
 #include "net.h"
+#include "observer_ptr.h"
 
 class CMasternodeSync;
 
@@ -52,7 +53,7 @@ private:
     int nCountFailures;
 
     // Keep track of current block index
-    const CBlockIndex *pCurrentBlockIndex;
+	nonstd::observer_ptr<const CBlockIndex> pCurrentBlockIndex;
 
     bool CheckNodeHeight(CNode* pnode, bool fDisconnectStuckNodes = false);
     void Fail();
@@ -84,7 +85,7 @@ public:
     void ProcessMessage(CNode* pfrom, std::string& strCommand, CDataStream& vRecv);
     void ProcessTick();
 
-    void UpdatedBlockTip(const CBlockIndex *pindex);
+    void UpdatedBlockTip(nonstd::observer_ptr<const CBlockIndex> pindex);
 };
 
 #endif

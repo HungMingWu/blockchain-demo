@@ -39,7 +39,7 @@ private:
     static const int ORPHAN_VOTE_SECONDS            = 60;
 
     // Keep track of current block index
-    const CBlockIndex *pCurrentBlockIndex;
+	nonstd::observer_ptr<const CBlockIndex> pCurrentBlockIndex;
 
     // maps for AlreadyHave
     std::map<uint256, CTxLockRequest> mapLockRequestAccepted; // tx hash - tx
@@ -103,7 +103,7 @@ public:
 
     void Relay(const uint256& txHash);
 
-    void UpdatedBlockTip(const CBlockIndex *pindex);
+    void UpdatedBlockTip(nonstd::observer_ptr<const CBlockIndex> pindex);
     void SyncTransaction(const CTransaction& tx, const CBlock* pblock);
 };
 

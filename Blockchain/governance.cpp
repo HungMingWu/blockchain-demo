@@ -24,8 +24,7 @@ int nSubmittedFinalBudget;
 const std::string CGovernanceManager::SERIALIZATION_VERSION_STRING = "CGovernanceManager-Version-8";
 
 CGovernanceManager::CGovernanceManager()
-    : pCurrentBlockIndex(NULL),
-      nTimeLastDiff(0),
+    : nTimeLastDiff(0),
       nCachedBlockHeight(0),
       mapObjects(),
       mapSeenGovernanceObjects(),
@@ -1192,7 +1191,7 @@ std::string CGovernanceManager::ToString() const
                     (int)mapVoteToObject.GetSize());
 }
 
-void CGovernanceManager::UpdatedBlockTip(const CBlockIndex *pindex)
+void CGovernanceManager::UpdatedBlockTip(nonstd::observer_ptr<const CBlockIndex> pindex)
 {
     // Note this gets called from ActivateBestChain without cs_main being held
     // so it should be safe to lock our mutex here without risking a deadlock

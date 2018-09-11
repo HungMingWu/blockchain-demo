@@ -131,7 +131,7 @@ std::unique_ptr<CBlockTemplate> CreateNewBlock(const CChainParams& chainparams, 
 
 	{
 		LOCK2(cs_main, mempool.cs);
-		CBlockIndex* pindexPrev = chainActive.Tip();
+		auto pindexPrev = chainActive.Tip();
 		const int nHeight = pindexPrev->nHeight + 1;
 		pblock->nTime = GetAdjustedTime();
 		CCoinsViewCache view(pcoinsTip.get());
@@ -146,7 +146,7 @@ std::unique_ptr<CBlockTemplate> CreateNewBlock(const CChainParams& chainparams, 
 		pblock->vtx.push_back(txNew);
 		pblocktemplate->vTxFees.push_back(-1); // updated at end
 		pblocktemplate->vTxSigOps.push_back(-1); // updated at end
-		pblock->nVersion = ComputeBlockVersion(pindexPrev, chainparams.GetConsensus());
+		pblock->nVersion = ComputeBlockVersion(pindexPrev.get(), chainparams.GetConsensus());
 		// -regtest only: allow overriding block.nVersion with
 		// -blockversion=N to test forking scenarios
 		if (chainparams.MineBlocksOnDemand())
@@ -452,7 +452,7 @@ std::unique_ptr<CBlockTemplate> CreateNewBlock(const CChainParams& chainparams, 
 
 		// Fill in header
 		pblock->hashPrevBlock = pindexPrev->GetBlockHash();
-		UpdateTime(pblock, chainparams.GetConsensus(), pindexPrev);
+		UpdateTime(pblock, chainparams.GetConsensus(), pindexPrev.get());
 #if 0
 		pblock->nBits = GetNextWorkRequired(pindexPrev, pblock, chainparams.GetConsensus());
 #endif
@@ -473,7 +473,7 @@ std::unique_ptr<CBlockTemplate> CreateNewBlock(const CChainParams& chainparams, 
 		trieCache.incrementBlock(dummyInsertUndo, dummyExpireUndo, dummyInsertSupportUndo, dummyExpireSupportUndo, dummyTakeoverHeightUndo);
 		//pblock->hashClaimTrie = trieCache.getMerkleHash();
 		CValidationState state;
-		if (!TestBlockValidity(state, chainparams, *pblock, pindexPrev, false, false)) {
+		if (!TestBlockValidity(state, chainparams, *pblock, pindexPrev.get(), false, false)) {
 			throw std::runtime_error(fmt::format("{}: TestBlockValidity failed: {}", __func__, FormatStateMessage(state)));
 		}
 	}
@@ -481,7 +481,7 @@ std::unique_ptr<CBlockTemplate> CreateNewBlock(const CChainParams& chainparams, 
 	return pblocktemplate;
 }
 
-void IncrementExtraNonce(CBlock* pblock, const CBlockIndex* pindexPrev, unsigned int& nExtraNonce)
+void IncrementExtraNonce(CBlock* pblock, nonstd::observer_ptr<const CBlockIndex> pindexPrev, unsigned int& nExtraNonce)
 {
     // Update nExtraNonce
     static uint256 hashPrevBlock;
@@ -572,8 +572,8 @@ void static BitcoinMiner(const CChainParams& chainparams)
             // Create new block
             //
             unsigned int nTransactionsUpdatedLast = mempool.GetTransactionsUpdated();
-            CBlockIndex* pindexPrev = chainActive.Tip();
-            if(!pindexPrev) break;
+            auto pindexPrev = chainActive.Tip();
+            if (!pindexPrev) break;
 
             unique_ptr<CBlockTemplate> pblocktemplate(CreateNewBlock(chainparams, coinbaseScript->reserveScript));
             if (!pblocktemplate.get())
@@ -635,7 +635,7 @@ void static BitcoinMiner(const CChainParams& chainparams)
                     break;
 
                 // Update nTime every few seconds
-                if (UpdateTime(pblock, chainparams.GetConsensus(), pindexPrev) < 0)
+                if (UpdateTime(pblock, chainparams.GetConsensus(), pindexPrev.get()) < 0)
                     break; // Recreate the block if the clock has run backwards,
                            // so that we can use the correct time.
                 if (chainparams.GetConsensus().fPowAllowMinDifficultyBlocks)

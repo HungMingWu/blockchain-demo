@@ -6,6 +6,7 @@
 #define PRIVSEND_H
 
 #include "masternode.h"
+#include "observer_ptr.h"
 #include "wallet/wallet.h"
 
 class CPrivSendPool;
@@ -319,7 +320,7 @@ private:
 
     int nCachedLastSuccessBlock;
     int nMinBlockSpacing; //required blocks between mixes
-    const CBlockIndex *pCurrentBlockIndex; // Keep track of current block index
+    nonstd::observer_ptr<const CBlockIndex> pCurrentBlockIndex; // Keep track of current block index
 
     int nSessionID; // 0 if no mixing session is active
 
@@ -475,7 +476,7 @@ public:
     /// Process a new block
     void NewBlock();
 
-    void UpdatedBlockTip(const CBlockIndex *pindex);
+    void UpdatedBlockTip(nonstd::observer_ptr<const CBlockIndex> pindex);
 };
 
 void ThreadCheckPrivSendPool();

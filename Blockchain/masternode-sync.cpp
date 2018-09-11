@@ -526,7 +526,7 @@ void CMasternodeSync::SendGovernanceSyncRequest(CNode* pnode)
     }
 }
 
-void CMasternodeSync::UpdatedBlockTip(const CBlockIndex *pindex)
+void CMasternodeSync::UpdatedBlockTip(nonstd::observer_ptr<const CBlockIndex> pindex)
 {
     pCurrentBlockIndex = pindex;
 }

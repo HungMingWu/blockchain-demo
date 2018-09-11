@@ -9,6 +9,7 @@
 //#include "chainparams.h"
 #include "main.h"
 #include "uint256.h"
+#include "observer_ptr.h"
 
 #include <stdint.h>
 
@@ -27,7 +28,7 @@ namespace Checkpoints {
     static const double SIGCHECK_VERIFICATION_FACTOR = 5.0;
 
     //! Guess how far we are in the verification process at the given block index
-    double GuessVerificationProgress(const CCheckpointData& data, CBlockIndex *pindex, bool fSigchecks) {
+    double GuessVerificationProgress(const CCheckpointData& data, nonstd::observer_ptr<CBlockIndex> pindex, bool fSigchecks) {
         if (pindex==NULL)
             return 0.0;
 

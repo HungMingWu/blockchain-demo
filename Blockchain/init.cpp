@@ -1485,7 +1485,7 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
 
                 {
                     LOCK(cs_main);
-                    CBlockIndex* tip = chainActive.Tip();
+                    auto tip = chainActive.Tip();
                     if (tip && tip->nTime > GetAdjustedTime() + 2 * 60 * 60) {
                         strLoadError = fmt::format("The block database contains a block which appears to be from the future. "
                                 "This may be due to your computer's date and time being set incorrectly. "

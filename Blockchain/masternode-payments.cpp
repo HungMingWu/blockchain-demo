@@ -981,9 +981,9 @@ int CMasternodePayments::GetStorageLimit()
     return std::max(int(mnodeman.size() * nStorageCoeff), nMinBlocksToStore);
 }
 
-void CMasternodePayments::UpdatedBlockTip(const CBlockIndex *pindex)
+void CMasternodePayments::UpdatedBlockTip(nonstd::observer_ptr<const CBlockIndex> pindex)
 {
-    pCurrentBlockIndex.reset(pindex);
+    pCurrentBlockIndex = pindex;
     LOG_INFO("CMasternodePayments::UpdatedBlockTip -- pCurrentBlockIndex->nHeight=%d\n", pCurrentBlockIndex->nHeight);
 
     ProcessBlock(pindex->nHeight + 10);

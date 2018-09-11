@@ -19,26 +19,26 @@
 #include <algorithm>
 
 // daa from zcash
-unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHeader *pblock, const Consensus::Params& params)
+unsigned int GetNextWorkRequired(nonstd::observer_ptr<const CBlockIndex> pindexLast, const CBlockHeader *pblock, const Consensus::Params& params)
 {
     unsigned int nProofOfWorkLimit = UintToArith256(params.powLimit).GetCompact();
 
     // Genesis block
-    if (pindexLast == NULL)
+    if (!pindexLast)
         return nProofOfWorkLimit;
 
     // Find the first block in the averaging interval
-    const CBlockIndex* pindexFirst = pindexLast;
+    auto pindexFirst = pindexLast;
     arith_uint256 bnTot {0};
     for (int i = 0; pindexFirst && i < params.nPowAveragingWindow; i++) {
         arith_uint256 bnTmp;
         bnTmp.SetCompact(pindexFirst->nBits);
         bnTot += bnTmp;
-        pindexFirst = pindexFirst->pprev.get();
+        pindexFirst = pindexFirst->pprev;
     }
 
     // Check we have enough blocks
-    if (pindexFirst == NULL)
+    if (!pindexFirst)
         return nProofOfWorkLimit;
 
     arith_uint256 bnAvg {bnTot / params.nPowAveragingWindow};

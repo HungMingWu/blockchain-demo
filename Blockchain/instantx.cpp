@@ -771,7 +771,7 @@ void CInstantSend::Relay(const uint256& txHash)
     }
 }
 
-void CInstantSend::UpdatedBlockTip(const CBlockIndex *pindex)
+void CInstantSend::UpdatedBlockTip(nonstd::observer_ptr<const CBlockIndex> pindex)
 {
     pCurrentBlockIndex = pindex;
 }

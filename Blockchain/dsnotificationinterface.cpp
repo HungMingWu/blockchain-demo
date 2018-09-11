@@ -9,6 +9,7 @@
 #include "masternodeman.h"
 #include "masternode-payments.h"
 #include "masternode-sync.h"
+#include "observer_ptr.h"
 
 CDSNotificationInterface::CDSNotificationInterface()
 {
@@ -20,12 +21,13 @@ CDSNotificationInterface::~CDSNotificationInterface()
 
 void CDSNotificationInterface::UpdatedBlockTip(const CBlockIndex *pindex)
 {
-    mnodeman.UpdatedBlockTip(pindex);
-    privSendPool.UpdatedBlockTip(pindex);
-    instantsend.UpdatedBlockTip(pindex);
-    mnpayments.UpdatedBlockTip(pindex);
-    governance.UpdatedBlockTip(pindex);
-    masternodeSync.UpdatedBlockTip(pindex);
+	auto index = nonstd::make_observer(pindex);
+    mnodeman.UpdatedBlockTip(index);
+    privSendPool.UpdatedBlockTip(index);
+    instantsend.UpdatedBlockTip(index);
+    mnpayments.UpdatedBlockTip(index);
+    governance.UpdatedBlockTip(index);
+    masternodeSync.UpdatedBlockTip(index);
 }
 
 void CDSNotificationInterface::SyncTransaction(const CTransaction &tx, const CBlock *pblock)

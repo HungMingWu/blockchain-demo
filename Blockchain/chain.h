@@ -345,15 +345,15 @@ public:
     }
 
     /** Returns the index entry for the tip of this chain, or NULL if none. */
-    CBlockIndex *Tip() const {
-        return vChain.size() > 0 ? vChain[vChain.size() - 1] : NULL;
+    nonstd::observer_ptr<CBlockIndex> Tip() const {
+        return vChain.size() > 0 ? nonstd::make_observer(vChain[vChain.size() - 1]) : nullptr;
     }
 
     /** Returns the index entry at a particular height in this chain, or NULL if no such height exists. */
-    CBlockIndex *operator[](int nHeight) const {
+    nonstd::observer_ptr<CBlockIndex> operator[](int nHeight) const {
         if (nHeight < 0 || nHeight >= (int)vChain.size())
-            return NULL;
-        return vChain[nHeight];
+            return nullptr;
+        return nonstd::make_observer(vChain[nHeight]);
     }
 
     /** Compare two chains efficiently. */
@@ -363,16 +363,16 @@ public:
     }
 
     /** Efficiently check whether a block is present in this chain. */
-    bool Contains(const CBlockIndex *pindex) const {
+    bool Contains(nonstd::observer_ptr<const CBlockIndex> pindex) const {
         return (*this)[pindex->nHeight] == pindex;
     }
 
     /** Find the successor of a block in this chain, or NULL if the given index is not found or is the tip. */
-    CBlockIndex *Next(const CBlockIndex *pindex) const {
-        if (Contains(pindex))
-            return (*this)[pindex->nHeight + 1];
-        else
-            return NULL;
+    nonstd::observer_ptr<CBlockIndex> Next(nonstd::observer_ptr<const CBlockIndex> pindex) const {
+		if (Contains(pindex))
+			return (*this)[pindex->nHeight + 1];
+		else
+			return nullptr;
     }
 
     /** Return the maximal height in the chain. Is equal to chain.Tip() ? chain.Tip()->nHeight : -1. */
@@ -384,10 +384,10 @@ public:
     void SetTip(CBlockIndex *pindex);
 
     /** Return a CBlockLocator that refers to a block in this chain (by default the tip). */
-    CBlockLocator GetLocator(const CBlockIndex *pindex = NULL) const;
+    CBlockLocator GetLocator(nonstd::observer_ptr<const CBlockIndex> pindex = nullptr) const;
 
     /** Find the last common block between this chain and a block index entry. */
-    const CBlockIndex *FindFork(const CBlockIndex *pindex) const;
+	nonstd::observer_ptr<const CBlockIndex> FindFork(nonstd::observer_ptr<const CBlockIndex> pindex) const;
 };
 
 #endif // ULORD_CHAIN_H

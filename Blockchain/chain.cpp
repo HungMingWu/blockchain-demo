@@ -22,7 +22,7 @@ void CChain::SetTip(CBlockIndex *pindex) {
     }
 }
 
-CBlockLocator CChain::GetLocator(const CBlockIndex *pindex) const {
+CBlockLocator CChain::GetLocator(nonstd::observer_ptr<const CBlockIndex> pindex) const {
     int nStep = 1;
     std::vector<uint256> vHave;
     vHave.reserve(32);
@@ -41,7 +41,7 @@ CBlockLocator CChain::GetLocator(const CBlockIndex *pindex) const {
             pindex = (*this)[nHeight];
         } else {
             // Otherwise, use O(log n) skiplist.
-            pindex = pindex->GetAncestor(nHeight).get();
+            pindex = pindex->GetAncestor(nHeight);
         }
         if (vHave.size() > 10)
             nStep *= 2;
@@ -50,14 +50,13 @@ CBlockLocator CChain::GetLocator(const CBlockIndex *pindex) const {
     return CBlockLocator(vHave);
 }
 
-const CBlockIndex *CChain::FindFork(const CBlockIndex *pindex) const {
-    if (pindex == NULL) {
-        return NULL;
-    }
+nonstd::observer_ptr<const CBlockIndex> CChain::FindFork(nonstd::observer_ptr<const CBlockIndex> pindex) const {
+	if (!pindex)
+		return nullptr;
     if (pindex->nHeight > Height())
-        pindex = pindex->GetAncestor(Height()).get();
+        pindex = pindex->GetAncestor(Height());
     while (pindex && !Contains(pindex))
-        pindex = pindex->pprev.get();
+        pindex = pindex->pprev;
     return pindex;
 }
 

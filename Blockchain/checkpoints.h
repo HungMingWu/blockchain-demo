@@ -29,7 +29,7 @@ int GetTotalBlocksEstimate(const CCheckpointData& data);
 nonstd::observer_ptr<const CBlockIndex> GetLastCheckpoint(const CCheckpointData& data);
 //PairCheckpoints ForceGetLastCheckpoint(const CCheckpointData& data);
 boost::optional<uint256> GetHeightCheckpoint(int nHeight ,const CCheckpointData& data);
-double GuessVerificationProgress(const CCheckpointData& data, CBlockIndex* pindex, bool fSigchecks = true);
+double GuessVerificationProgress(const CCheckpointData& data, nonstd::observer_ptr<CBlockIndex> pindex, bool fSigchecks = true);
 
 } //namespace Checkpoints
 

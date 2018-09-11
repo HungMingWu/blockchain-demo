@@ -11,6 +11,7 @@
 #include "main.h"
 #include "masternode.h"
 #include "utilstrencodings.h"
+#include "observer_ptr.h"
 
 class CMasternodePayments;
 class CMasternodePaymentVote;
@@ -218,7 +219,7 @@ public:
     bool IsEnoughData();
     int GetStorageLimit();
 
-    void UpdatedBlockTip(const CBlockIndex *pindex);
+    void UpdatedBlockTip(nonstd::observer_ptr<const CBlockIndex> pindex);
 };
 
 #endif

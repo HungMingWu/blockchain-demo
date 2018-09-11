@@ -74,7 +74,7 @@ CCriticalSection cs_main;
 
 BlockMap mapBlockIndex;
 CChain chainActive;
-CBlockIndex *pindexBestHeader = NULL;
+nonstd::observer_ptr<CBlockIndex> pindexBestHeader;
 int64_t nTimeBestReceived = 0;
 CWaitableCriticalSection csBestBlock;
 CConditionVariable cvBlockChange;
@@ -503,7 +503,7 @@ std::tuple<std::vector<CBlockIndex*>, NodeId> FindNextBlocksToDownload(NodeId no
     if (!state->pindexLastCommonBlock) {
         // Bootstrap quickly by guessing a parent of our best tip is the forking point.
         // Guessing wrong in either direction is not a problem.
-        state->pindexLastCommonBlock.reset(chainActive[std::min(state->pindexBestKnownBlock->nHeight, chainActive.Height())]);
+        state->pindexLastCommonBlock = chainActive[std::min(state->pindexBestKnownBlock->nHeight, chainActive.Height())];
     }
 
     // If the peer reorganized, our previous pindexLastCommonBlock may not be an ancestor
@@ -541,7 +541,7 @@ std::tuple<std::vector<CBlockIndex*>, NodeId> FindNextBlocksToDownload(NodeId no
                 // We consider the chain that this peer is on invalid.
                 return {vBlocks, nodeStaller};
             }
-            if (pindex->nStatus & BLOCK_HAVE_DATA || chainActive.Contains(pindex.get())) {
+            if (pindex->nStatus & BLOCK_HAVE_DATA || chainActive.Contains(pindex)) {
                 if (pindex->nChainTx)
                     state->pindexLastCommonBlock = pindex;
             } else if (mapBlocksInFlight.count(pindex->GetBlockHash()) == 0) {
@@ -603,19 +603,19 @@ void UnregisterNodeSignals(CNodeSignals& nodeSignals)
     nodeSignals.FinalizeNode.disconnect(&FinalizeNode);
 }
 
-CBlockIndex* FindForkInGlobalIndex(const CChain& chain, const CBlockLocator& locator)
+nonstd::observer_ptr<CBlockIndex> FindForkInGlobalIndex(const CChain& chain, const CBlockLocator& locator)
 {
     // Find the first block the caller has in the main chain
     for (const uint256& hash : locator.vHave) {
         auto mi = mapBlockIndex.find(hash);
         if (mi != mapBlockIndex.end())
         {
-            auto &pindex = (*mi).second;
-            if (chain.Contains(pindex.get()))
-                return pindex.get();
+            auto pindex = nonstd::make_observer((*mi).second.get());
+			if (chain.Contains(pindex))
+				return pindex;
         }
     }
-    return chain.Genesis();
+    return nonstd::make_observer(chain.Genesis());
 }
 
 std::unique_ptr<CCoinsViewCache> pcoinsTip;
@@ -846,7 +846,7 @@ bool TestLockPointValidity(const LockPoints* lp)
     if (lp->maxInputBlock) {
         // Check whether chainActive is an extension of the block at which the LockPoints
         // calculation was valid.  If not LockPoints are no longer valid
-        if (!chainActive.Contains(lp->maxInputBlock.get())) {
+        if (!chainActive.Contains(lp->maxInputBlock)) {
             return false;
         }
     }
@@ -860,9 +860,9 @@ bool CheckSequenceLocks(const CTransaction &tx, int flags, LockPoints* lp, bool 
     AssertLockHeld(cs_main);
     AssertLockHeld(mempool.cs);
 
-    CBlockIndex* tip = chainActive.Tip();
+    auto tip = chainActive.Tip();
     CBlockIndex index;
-    index.pprev.reset(tip);
+    index.pprev = tip;
     // CheckSequenceLocks() uses chainActive.Height()+1 to evaluate
     // height based locks because when SequenceLocks() is called within
     // ConnectBlock(), the height of the block *being*
@@ -1688,7 +1688,7 @@ bool GetAddressUnspent(uint160 addressHash, int type,
 /** Return transaction in tx, and if it was found inside a block, its hash is placed in hashBlock */
 TractactionTuple GetTransaction(const uint256 &hash, const Consensus::Params& consensusParams, bool fAllowSlow)
 {
-    CBlockIndex *pindexSlow = NULL;
+    nonstd::observer_ptr<CBlockIndex> pindexSlow;
 
     LOCK(cs_main);
 
@@ -2023,19 +2023,19 @@ void CheckForkWarningConditions()
 #endif
 }
 
-void CheckForkWarningConditionsOnNewFork(const CBlockIndex* pindexNewForkTip)
+void CheckForkWarningConditionsOnNewFork(nonstd::observer_ptr<const CBlockIndex> pindexNewForkTip)
 {
     AssertLockHeld(cs_main);
     // If we are on a fork that is sufficiently large, set a warning flag
-    const CBlockIndex* pfork = pindexNewForkTip;
-    const CBlockIndex* plonger = chainActive.Tip();
+    auto pfork = pindexNewForkTip;
+    auto plonger = chainActive.Tip();
     while (pfork && pfork != plonger)
     {
         while (plonger && plonger->nHeight > pfork->nHeight)
-            plonger = plonger->pprev.get();
+            plonger = plonger->pprev;
         if (pfork == plonger)
             break;
-        pfork = pfork->pprev.get();
+        pfork = pfork->pprev;
     }
 
     // We define a condition where we should warn the user about as a fork of at least 7 blocks
@@ -2086,7 +2086,7 @@ void static InvalidChainFound(CBlockIndex* pindexNew)
       pindexNew->GetBlockHash().ToString(), pindexNew->nHeight,
       log(pindexNew->nChainWork.getdouble())/log(2.0), DateTimeStrFormat("%Y-%m-%d %H:%M:%S",
       pindexNew->GetBlockTime()));
-    CBlockIndex *tip = chainActive.Tip();
+    auto tip = chainActive.Tip();
     assert (tip);
     LOG_INFO("%s:  current best=%s  height=%d  log2_work=%.8g  date=%s\n", __func__,
       tip->GetBlockHash().ToString(), chainActive.Height(), log(tip->nChainWork.getdouble())/log(2.0),
@@ -3607,7 +3607,7 @@ void static UpdateTip(CBlockIndex *pindexNew) {
 /** Disconnect chainActive's tip. You probably want to call mempool.removeForReorg and manually re-limit mempool size after this, with cs_main held. */
 CValidationState static DisconnectTip(const Consensus::Params& consensusParams)
 {
-    CBlockIndex *pindexDelete = chainActive.Tip();
+    auto pindexDelete = chainActive.Tip();
     assert(pindexDelete);
     // Read block from disk.
 	CValidationState state;
@@ -3621,7 +3621,7 @@ CValidationState static DisconnectTip(const Consensus::Params& consensusParams)
     {
         CCoinsViewCache view(pcoinsTip.get());
         CClaimTrieCache trieCache(*pclaimTrie);
-		if (!DisconnectBlock(*block, state, pindexDelete, view, trieCache)) {
+		if (!DisconnectBlock(*block, state, pindexDelete.get(), view, trieCache)) {
 			LOG_ERROR("DisconnectTip(): DisconnectBlock %s failed", pindexDelete->GetBlockHash().ToString());
 			return state;
 		}
@@ -3673,7 +3673,7 @@ static int64_t nTimePostConnect = 0;
  */
 CValidationState static ConnectTip(const CChainParams& chainparams, CBlockIndex* pindexNew, const CBlock* pblock)
 {
-    assert(pindexNew->pprev.get() == chainActive.Tip());
+    assert(pindexNew->pprev == chainActive.Tip());
 	CValidationState state;
     // Read block from disk.
     int64_t nTime1 = GetTimeMicros();
@@ -3795,7 +3795,7 @@ static nonstd::observer_ptr<CBlockIndex> FindMostWorkChain() {
         // Just going until the active chain is an optimization, as we know all blocks in it are valid already.
         nonstd::observer_ptr<CBlockIndex> pindexTest = pindexNew;
         bool fInvalidAncestor = false;
-        while (pindexTest && !chainActive.Contains(pindexTest.get())) {
+        while (pindexTest && !chainActive.Contains(pindexTest)) {
             assert(pindexTest->nChainTx || pindexTest->nHeight == 0);
 
             // Pruned nodes may have entries in setBlockIndexCandidates for
@@ -3838,7 +3838,7 @@ static void PruneBlockIndexCandidates() {
     // Note that we can't delete the current block itself, as we may need to return to it later in case a
     // reorganization to a better block fails.
     std::set<CBlockIndex*, CBlockIndexWorkComparator>::iterator it = setBlockIndexCandidates.begin();
-    while (it != setBlockIndexCandidates.end() && setBlockIndexCandidates.value_comp()(*it, chainActive.Tip())) {
+    while (it != setBlockIndexCandidates.end() && setBlockIndexCandidates.value_comp()(*it, chainActive.Tip().get())) {
         setBlockIndexCandidates.erase(it++);
     }
     // Either the current tip or a successor of it we're working towards is left in setBlockIndexCandidates.
@@ -3849,12 +3849,12 @@ static void PruneBlockIndexCandidates() {
  * Try to make some progress towards making pindexMostWork the active block.
  * pblock is either NULL or a pointer to a CBlock corresponding to pindexMostWork.
  */
-static CValidationState ActivateBestChainStep(const CChainParams& chainparams, CBlockIndex* pindexMostWork, const CBlock* pblock)
+static CValidationState ActivateBestChainStep(const CChainParams& chainparams, nonstd::observer_ptr<CBlockIndex> pindexMostWork, const CBlock* pblock)
 {
     AssertLockHeld(cs_main);
     bool fInvalidFound = false;
-    const CBlockIndex *pindexOldTip = chainActive.Tip();
-    const CBlockIndex *pindexFork = chainActive.FindFork(pindexMostWork);
+    auto pindexOldTip = chainActive.Tip();
+    auto pindexFork = chainActive.FindFork(pindexMostWork);
 
     // Disconnect active blocks which are no longer in the best chain.
     bool fBlocksDisconnected = false;
@@ -3885,7 +3885,7 @@ static CValidationState ActivateBestChainStep(const CChainParams& chainparams, C
 
         // Connect new blocks.
         for (CBlockIndex *pindexConnect : boost::adaptors::reverse(vpindexToConnect)) {
-			state = ConnectTip(chainparams, pindexConnect, pindexConnect == pindexMostWork ? pblock : NULL);
+			state = ConnectTip(chainparams, pindexConnect, pindexConnect == pindexMostWork.get() ? pblock : NULL);
             if (!state.IsValid()) {
                 if (state.IsInvalid()) {
                     // The block violates a consensus rule.
@@ -3918,7 +3918,7 @@ static CValidationState ActivateBestChainStep(const CChainParams& chainparams, C
 
     // Callbacks/notifications for a new best chain.
     if (fInvalidFound)
-        CheckForkWarningConditionsOnNewFork(vpindexToConnect.back());
+        CheckForkWarningConditionsOnNewFork(nonstd::make_observer(vpindexToConnect.back()));
     else
         CheckForkWarningConditions();
 
@@ -3938,19 +3938,19 @@ CValidationState ActivateBestChain(const CChainParams& chainparams, const CBlock
         if (ShutdownRequested())
             break;
 
-        CBlockIndex *pindexNewTip = NULL;
-        const CBlockIndex *pindexFork;
+        nonstd::observer_ptr<CBlockIndex> pindexNewTip;
+        nonstd::observer_ptr<const CBlockIndex> pindexFork;
         bool fInitialDownload;
         {
             LOCK(cs_main);
-            CBlockIndex *pindexOldTip = chainActive.Tip();
+            auto pindexOldTip = chainActive.Tip();
             pindexMostWork = FindMostWorkChain();
 
             // Whether we have anything to do at all.
-            if (!pindexMostWork || pindexMostWork.get() == chainActive.Tip())
+            if (!pindexMostWork || pindexMostWork == chainActive.Tip())
                 return state;
 
-			state = ActivateBestChainStep(chainparams, pindexMostWork.get(), pblock && pblock->GetHash() == pindexMostWork->GetBlockHash() ? pblock : NULL);
+			state = ActivateBestChainStep(chainparams, pindexMostWork, pblock && pblock->GetHash() == pindexMostWork->GetBlockHash() ? pblock : NULL);
             if (!state.IsValid())
                 return state;
 
@@ -3967,10 +3967,10 @@ CValidationState ActivateBestChain(const CChainParams& chainparams, const CBlock
             if (!fInitialDownload) {
                 // Find the hashes of all blocks that weren't previously in the best chain.
                 std::vector<uint256> vHashes;
-                CBlockIndex *pindexToAnnounce = pindexNewTip;
+                auto pindexToAnnounce = pindexNewTip;
                 while (pindexToAnnounce != pindexFork) {
                     vHashes.push_back(pindexToAnnounce->GetBlockHash());
-                    pindexToAnnounce = pindexToAnnounce->pprev.get();
+                    pindexToAnnounce = pindexToAnnounce->pprev;
                     if (vHashes.size() == MAX_BLOCKS_TO_ANNOUNCE) {
                         // Limit announcements in case of a huge reorganization.
                         // Rely on the peer's synchronization mechanism in that case.
@@ -3993,32 +3993,32 @@ CValidationState ActivateBestChain(const CChainParams& chainparams, const CBlock
                 }
                 // Notify external listeners about the new tip.
                 if (!vHashes.empty()) {
-                    GetMainSignals().UpdatedBlockTip(pindexNewTip);
+                    GetMainSignals().UpdatedBlockTip(pindexNewTip.get());
                 }
             }
         }
-    } while(pindexMostWork.get() != chainActive.Tip());
+    } while(pindexMostWork != chainActive.Tip());
     CheckBlockIndex(chainparams.GetConsensus());
 
     // Write changes periodically to disk, after relay.
 	return FlushStateToDisk(FLUSH_STATE_PERIODIC);
 }
 
-CValidationState InvalidateBlock(const Consensus::Params& consensusParams, CBlockIndex *pindex)
+CValidationState InvalidateBlock(const Consensus::Params& consensusParams, nonstd::observer_ptr<CBlockIndex> pindex)
 {
     AssertLockHeld(cs_main);
 
     // Mark the block itself as invalid.
     pindex->nStatus |= BLOCK_FAILED_VALID;
-    setDirtyBlockIndex.insert(pindex);
-    setBlockIndexCandidates.erase(pindex);
+    setDirtyBlockIndex.insert(pindex.get());
+    setBlockIndexCandidates.erase(pindex.get());
 	CValidationState state;
 
     while (chainActive.Contains(pindex)) {
-        CBlockIndex *pindexWalk = chainActive.Tip();
+        auto pindexWalk = chainActive.Tip();
         pindexWalk->nStatus |= BLOCK_FAILED_CHILD;
-        setDirtyBlockIndex.insert(pindexWalk);
-        setBlockIndexCandidates.erase(pindexWalk);
+        setDirtyBlockIndex.insert(pindexWalk.get());
+        setBlockIndexCandidates.erase(pindexWalk.get());
         // ActivateBestChain considers blocks already in chainActive
         // unconditionally valid already, so force disconnect away from it.
 		state = DisconnectTip(consensusParams);
@@ -4034,13 +4034,13 @@ CValidationState InvalidateBlock(const Consensus::Params& consensusParams, CBloc
     // add it again.
     auto it = mapBlockIndex.begin();
     while (it != mapBlockIndex.end()) {
-        if (it->second->IsValid(BLOCK_VALID_TRANSACTIONS) && it->second->nChainTx && !setBlockIndexCandidates.value_comp()(it->second.get(), chainActive.Tip())) {
+        if (it->second->IsValid(BLOCK_VALID_TRANSACTIONS) && it->second->nChainTx && !setBlockIndexCandidates.value_comp()(it->second.get(), chainActive.Tip().get())) {
             setBlockIndexCandidates.insert(it->second.get());
         }
         it++;
     }
 
-    InvalidChainFound(pindex);
+    InvalidChainFound(pindex.get());
     mempool.removeForReorg(pcoinsTip.get(), chainActive.Tip()->nHeight + 1, STANDARD_LOCKTIME_VERIFY_FLAGS);
     return state;
 }
@@ -4056,7 +4056,7 @@ bool ReconsiderBlock(CValidationState& state, CBlockIndex *pindex) {
         if (!it->second->IsValid() && it->second->GetAncestor(nHeight).get() == pindex) {
             it->second->nStatus &= ~BLOCK_FAILED_MASK;
             setDirtyBlockIndex.insert(it->second.get());
-            if (it->second->IsValid(BLOCK_VALID_TRANSACTIONS) && it->second->nChainTx && setBlockIndexCandidates.value_comp()(chainActive.Tip(), it->second.get())) {
+            if (it->second->IsValid(BLOCK_VALID_TRANSACTIONS) && it->second->nChainTx && setBlockIndexCandidates.value_comp()(chainActive.Tip().get(), it->second.get())) {
                 setBlockIndexCandidates.insert(it->second.get());
             }
             if (it->second.get() == pindexBestInvalid.get()) {
@@ -4106,8 +4106,8 @@ CBlockIndex* AddToBlockIndex(const CBlockHeader& block)
     pindexNew->nChainWork = (pindexNew->pprev ? pindexNew->pprev->nChainWork : 0) + GetBlockProof(*pindexNew);
 #endif
     pindexNew->RaiseValidity(BLOCK_VALID_TREE);
-    if (pindexBestHeader == NULL || pindexBestHeader->nChainWork < pindexNew->nChainWork)
-        pindexBestHeader = pindexNew;
+    if (!pindexBestHeader || pindexBestHeader->nChainWork < pindexNew->nChainWork)
+        pindexBestHeader = nonstd::make_observer(pindexNew);
 
     setDirtyBlockIndex.insert(pindexNew);
 
@@ -4140,7 +4140,7 @@ bool ReceivedBlockTransactions(const CBlock &block, CBlockIndex *pindexNew, cons
                 LOCK(cs_nBlockSequenceId);
                 pindex->nSequenceId = nBlockSequenceId++;
             }
-            if (chainActive.Tip() == NULL || !setBlockIndexCandidates.value_comp()(pindex, chainActive.Tip())) {
+            if (!chainActive.Tip() || !setBlockIndexCandidates.value_comp()(pindex, chainActive.Tip().get())) {
                 setBlockIndexCandidates.insert(pindex);
             }
             std::pair<std::multimap<CBlockIndex*, CBlockIndex*>::iterator, std::multimap<CBlockIndex*, CBlockIndex*>::iterator> range = mapBlocksUnlinked.equal_range(pindex);
@@ -4502,21 +4502,21 @@ CValidationState ContextualCheckBlock(const CBlock& block, CBlockIndex * const p
     return state;
 }
 
-static std::tuple<CValidationState, CBlockIndex*> AcceptBlockHeader(const CBlockHeader& block, const CChainParams& chainparams)
+static std::tuple<CValidationState, nonstd::observer_ptr<CBlockIndex>> AcceptBlockHeader(const CBlockHeader& block, const CChainParams& chainparams)
 {
     AssertLockHeld(cs_main);
     // Check for duplicate
     uint256 hash = block.GetHash();
     auto miSelf = mapBlockIndex.find(hash);
 	CValidationState state;
-    CBlockIndex *pindex = nullptr;
+    nonstd::observer_ptr<CBlockIndex> pindex;
 
     // TODO : ENABLE BLOCK CACHE IN SPECIFIC CASES
     if (hash != chainparams.GetConsensus().hashGenesisBlock) {
 
         if (miSelf != mapBlockIndex.end()) {
             // Block header is already known.
-            pindex = miSelf->second.get();
+            pindex = nonstd::make_observer(miSelf->second.get());
             if (pindex->nStatus & BLOCK_FAILED_MASK) {
 				LOG_ERROR("%s: block is marked invalid", __func__);
                 state.Invalid(0, "duplicate");
@@ -4573,8 +4573,8 @@ static std::tuple<CValidationState, CBlockIndex*> AcceptBlockHeader(const CBlock
 			return { state, pindex };
     }
 
-    if (pindex == nullptr)
-        pindex = AddToBlockIndex(block);
+    if (!pindex)
+        pindex.reset(AddToBlockIndex(block));
 
 	return { {}, pindex };
 }
@@ -4587,11 +4587,11 @@ static CValidationState AcceptBlock(const CBlock& block, const CChainParams& cha
     CBlockIndex *&pindex = *ppindex;
 
 	CValidationState state;
-	CBlockIndex *pindex1 = nullptr;
+	nonstd::observer_ptr<CBlockIndex> pindex1;
 	std::tie(state, pindex1) = AcceptBlockHeader(block, chainparams);
 	if (!state.IsValid())
 		return state;
-	pindex = pindex1;
+	pindex = pindex1.get();
 
     // Try to process all requested blocks that we don't have, but only
     // process an unrequested block if it's new and has enough work to
@@ -4720,7 +4720,7 @@ CValidationState ProcessNewBlock(const CChainParams& chainparams, const CNode* p
 bool TestBlockValidity(CValidationState& state, const CChainParams& chainparams, const CBlock& block, CBlockIndex* pindexPrev, bool fCheckPOW, bool fCheckMerkleRoot)
 {
     AssertLockHeld(cs_main);
-    assert(pindexPrev && pindexPrev == chainActive.Tip());
+    assert(pindexPrev && pindexPrev == chainActive.Tip().get());
 	if (fCheckpointsEnabled && !CheckIndexAgainstCheckpoint(*pindexPrev, state, chainparams, block.GetHash()))
 	{
 		LOG_ERROR("{}: CheckIndexAgainstCheckpoint(): {}", __func__, state.GetRejectReason().c_str());
@@ -4942,7 +4942,7 @@ bool static LoadBlockIndexDB()
     sort(vSortedByHeight.begin(), vSortedByHeight.end());
     for (const auto &item : vSortedByHeight)
     {
-        CBlockIndex* pindex = item.second;
+        auto pindex = nonstd::make_observer(item.second);
 #if 0
         pindex->nChainWork = (pindex->pprev ? pindex->pprev->nChainWork : 0) + GetBlockProof(*pindex);
 #endif
@@ -4961,12 +4961,12 @@ bool static LoadBlockIndexDB()
             }
         }
         if (pindex->IsValid(BLOCK_VALID_TRANSACTIONS) && (pindex->nChainTx || pindex->pprev == NULL))
-            setBlockIndexCandidates.insert(pindex);
+            setBlockIndexCandidates.insert(pindex.get());
         if (pindex->nStatus & BLOCK_FAILED_MASK && (!pindexBestInvalid || pindex->nChainWork > pindexBestInvalid->nChainWork))
-            pindexBestInvalid .reset(pindex);
+            pindexBestInvalid  = pindex;
         if (pindex->pprev)
             pindex->BuildSkip();
-        if (pindex->IsValid(BLOCK_VALID_TREE) && (pindexBestHeader == NULL || CBlockIndexWorkComparator()(pindexBestHeader, pindex)))
+        if (pindex->IsValid(BLOCK_VALID_TREE) && (!pindexBestHeader || CBlockIndexWorkComparator()(pindexBestHeader.get(), pindex.get())))
             pindexBestHeader = pindex;
     }
 
@@ -5070,11 +5070,11 @@ bool CVerifyDB::VerifyDB(const CChainParams& chainparams, CCoinsView *coinsview,
     LOG_INFO("Verifying last %i blocks at level %i\n", nCheckDepth, nCheckLevel);
     CCoinsViewCache coins(coinsview);
     CClaimTrieCache trieCache(*pclaimTrie);
-    CBlockIndex* pindexState = chainActive.Tip();
-    CBlockIndex* pindexFailure = NULL;
+    auto pindexState = chainActive.Tip();
+    nonstd::observer_ptr<CBlockIndex> pindexFailure;
     int nGoodTransactions = 0;
     CValidationState state;
-    for (CBlockIndex* pindex = chainActive.Tip(); pindex && pindex->pprev; pindex = pindex->pprev.get())
+    for (auto pindex = chainActive.Tip(); pindex && pindex->pprev; pindex = pindex->pprev)
     {
         boost::this_thread::interruption_point();
         if (pindex->nHeight < chainActive.Height()-nCheckDepth)
@@ -5105,11 +5105,11 @@ bool CVerifyDB::VerifyDB(const CChainParams& chainparams, CCoinsView *coinsview,
         // check level 3: check for inconsistencies during memory-only disconnect of tip blocks
         if (nCheckLevel >= 3 && pindex == pindexState && (coins.DynamicMemoryUsage() + pcoinsTip->DynamicMemoryUsage()) <= nCoinCacheUsage) {
             bool fClean = true;
-			if (!DisconnectBlock(*block, state, pindex, coins, trieCache, &fClean)) {
+			if (!DisconnectBlock(*block, state, pindex.get(), coins, trieCache, &fClean)) {
 				LOG_ERROR("VerifyDB(): *** irrecoverable inconsistency in block data at %d, hash=%s", pindex->nHeight, pindex->GetBlockHash().ToString());
 				return false;
 			}
-            pindexState = pindex->pprev.get();
+            pindexState = pindex->pprev;
             if (!fClean) {
                 nGoodTransactions = 0;
                 pindexFailure = pindex;
@@ -5126,7 +5126,7 @@ bool CVerifyDB::VerifyDB(const CChainParams& chainparams, CCoinsView *coinsview,
 
     // check level 4: try reconnecting blocks
     if (nCheckLevel >= 4) {
-        CBlockIndex *pindex = pindexState;
+        auto pindex = pindexState;
         while (pindex != chainActive.Tip()) {
 			boost::this_thread::interruption_point();
             pindex = chainActive.Next(pindex);
@@ -5135,7 +5135,7 @@ bool CVerifyDB::VerifyDB(const CChainParams& chainparams, CCoinsView *coinsview,
 				LOG_ERROR("VerifyDB(): *** ReadBlockFromDisk failed at %d, hash=%s", pindex->nHeight, pindex->GetBlockHash().ToString());
 				return false;
 			}
-			state = ConnectBlock(*block, pindex, coins, trieCache);
+			state = ConnectBlock(*block, pindex.get(), coins, trieCache);
 			if (!state.IsValid()) {
 				LOG_ERROR("VerifyDB(): *** found unconnectable block at %d, hash=%s", pindex->nHeight, pindex->GetBlockHash().ToString());
 				return false;
@@ -5143,12 +5143,12 @@ bool CVerifyDB::VerifyDB(const CChainParams& chainparams, CCoinsView *coinsview,
         }
     }
 
-    LOG_INFO("No coin database inconsistencies in last %i blocks (%i transactions)\n", chainActive.Height() - pindexState->nHeight, nGoodTransactions);
+    LOG_INFO("No coin database inconsistencies in last {} blocks ({} transactions)\n", chainActive.Height() - pindexState->nHeight, nGoodTransactions);
 
     return true;
 }
 
-bool GetProofForName(const CBlockIndex* pindexProof, const std::string& name, CClaimTrieProof& proof)
+bool GetProofForName(nonstd::observer_ptr<const CBlockIndex> pindexProof, const std::string& name, CClaimTrieProof& proof)
 {   
     AssertLockHeld(cs_main);
     if (!chainActive.Contains(pindexProof))
@@ -5157,9 +5157,9 @@ bool GetProofForName(const CBlockIndex* pindexProof, const std::string& name, CC
     }
     CCoinsViewCache coins(pcoinsTip.get());
     CClaimTrieCache trieCache(*pclaimTrie);
-    CBlockIndex* pindexState = chainActive.Tip();
+    nonstd::observer_ptr<CBlockIndex> pindexState = chainActive.Tip();
     CValidationState state;
-    for (CBlockIndex *pindex = chainActive.Tip(); pindex && pindex->pprev && pindexState != pindexProof; pindex=pindex->pprev.get())
+    for (auto pindex = chainActive.Tip(); pindex && pindex->pprev && pindexState != pindexProof; pindex=pindex->pprev)
     {   
         boost::this_thread::interruption_point();
         Opt<CBlock> block = ReadBlockFromDisk(*pindex, Params().GetConsensus());
@@ -5170,10 +5170,10 @@ bool GetProofForName(const CBlockIndex* pindexProof, const std::string& name, CC
         if (pindex == pindexState && (coins.DynamicMemoryUsage() + pcoinsTip->DynamicMemoryUsage()) <= nCoinCacheUsage)
         {   
             bool fClean = true;
-            if (!DisconnectBlock(*block, state, pindex, coins, trieCache, &fClean)) {
+            if (!DisconnectBlock(*block, state, pindex.get(), coins, trieCache, &fClean)) {
                 return false;
             }
-            pindexState = pindex->pprev.get();
+            pindexState = pindex->pprev;
         }
         if (ShutdownRequested())
             return false;
@@ -5478,13 +5478,13 @@ void static CheckBlockIndex(const Consensus::Params& consensusParams)
             // Checks for not-invalid blocks.
             assert((pindex->nStatus & BLOCK_FAILED_MASK) == 0); // The failed mask cannot be set for blocks without invalid parents.
         }
-        if (!CBlockIndexWorkComparator()(pindex, chainActive.Tip()) && pindexFirstNeverProcessed == NULL) {
+        if (!CBlockIndexWorkComparator()(pindex, chainActive.Tip().get()) && pindexFirstNeverProcessed == NULL) {
             if (pindexFirstInvalid == NULL) {
                 // If this block sorts at least as good as the current tip and
                 // is valid and we have all data for its parents, it must be in
                 // setBlockIndexCandidates.  chainActive.Tip() must also be there
                 // even if some data has been pruned.
-                if (pindexFirstMissing == NULL || pindex == chainActive.Tip()) {
+                if (pindexFirstMissing == NULL || pindex == chainActive.Tip().get()) {
                     assert(setBlockIndexCandidates.count(pindex));
                 }
                 // If some parent is missing, then it could be that this block was in
@@ -5524,7 +5524,7 @@ void static CheckBlockIndex(const Consensus::Params& consensusParams)
             //    tip.
             // So if this block is itself better than chainActive.Tip() and it wasn't in
             // setBlockIndexCandidates, then it must be in mapBlocksUnlinked.
-            if (!CBlockIndexWorkComparator()(pindex, chainActive.Tip()) && setBlockIndexCandidates.count(pindex) == 0) {
+            if (!CBlockIndexWorkComparator()(pindex, chainActive.Tip().get()) && setBlockIndexCandidates.count(pindex) == 0) {
                 if (pindexFirstInvalid == NULL) {
                     assert(foundInUnlinked);
                 }
@@ -5756,7 +5756,7 @@ void static ProcessGetData(CNode* pfrom, const Consensus::Params& consensusParam
                 auto mi = mapBlockIndex.find(inv.hash);
                 if (mi != mapBlockIndex.end())
                 {
-                    if (chainActive.Contains(mi->second.get())) {
+                    if (chainActive.Contains(nonstd::make_observer(mi->second.get()))) {
                         send = true;
                     } else {
                         static const int nOneMonth = 30 * 24 * 60 * 60;
@@ -6390,7 +6390,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
         LOCK(cs_main);
 
         // Find the last block the caller has in the main chain
-        CBlockIndex* pindex = FindForkInGlobalIndex(chainActive, locator);
+        auto pindex = FindForkInGlobalIndex(chainActive, locator);
 
         // Send the rest of the chain
         if (pindex)
@@ -6438,14 +6438,14 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
         }
 
         CNodeState *nodestate = State(pfrom->GetId());
-        CBlockIndex* pindex = NULL;
+        nonstd::observer_ptr<CBlockIndex> pindex;
         if (locator.IsNull())
         {
             // If locator is null, return the hashStop block
             auto mi = mapBlockIndex.find(hashStop);
             if (mi == mapBlockIndex.end())
                 return true;
-            pindex = (*mi).second.get();
+            pindex = nonstd::make_observer((*mi).second.get());
         }
         else
         {
@@ -6469,7 +6469,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
         // if our peer has chainActive.Tip() (and thus we are sending an empty
         // headers message). In both cases it's safe to update
         // pindexBestHeaderSent to be our tip.
-        nodestate->pindexBestHeaderSent.reset(pindex ? pindex : chainActive.Tip());
+		nodestate->pindexBestHeaderSent = pindex ? pindex : chainActive.Tip();
         pfrom->PushMessage(NetMsgType::HEADERS, vHeaders);
     }
 
@@ -6714,7 +6714,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
             return true;
         }
 
-        CBlockIndex *pindexLast = NULL;
+        nonstd::observer_ptr<CBlockIndex> pindexLast;
 	    
 	    //prevent chain sync.    
 	    /*PairCheckpoints lastCheckpoint_t;
@@ -6736,7 +6736,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
                 else LOG_INFO("checkpoint verify correct.\n");
             }*/
 		
-            if (pindexLast != NULL && header.hashPrevBlock != pindexLast->GetBlockHash()) {
+            if (pindexLast && header.hashPrevBlock != pindexLast->GetBlockHash()) {
                 Misbehaving(pfrom->GetId(), 20);
 				LOG_ERROR("non-continuous headers sequence");
 				return false;
@@ -6772,15 +6772,15 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
         // much work as our tip, download as much as possible.
         if (fCanDirectFetch && pindexLast->IsValid(BLOCK_VALID_TREE) && chainActive.Tip()->nChainWork <= pindexLast->nChainWork) {
             vector<CBlockIndex *> vToFetch;
-            CBlockIndex *pindexWalk = pindexLast;
+            auto pindexWalk = pindexLast;
             // Calculate all the blocks we'd need to switch to pindexLast, up to a limit.
             while (pindexWalk && !chainActive.Contains(pindexWalk) && vToFetch.size() <= MAX_BLOCKS_IN_TRANSIT_PER_PEER) {
                 if (!(pindexWalk->nStatus & BLOCK_HAVE_DATA) &&
                         !mapBlocksInFlight.count(pindexWalk->GetBlockHash())) {
                     // We don't have this block, and it's not yet in flight.
-                    vToFetch.push_back(pindexWalk);
+                    vToFetch.push_back(pindexWalk.get());
                 }
-                pindexWalk = pindexWalk->pprev.get();
+                pindexWalk = pindexWalk->pprev;
             }
             // If pindexWalk still isn't on our main chain, we're looking at a
             // very large reorg at a time we think we're close to caught up to
@@ -7326,7 +7326,7 @@ bool SendMessages(CNode* pto)
         state.rejects.clear();
 
         // Start block sync
-        if (pindexBestHeader == NULL)
+        if (!pindexBestHeader)
             pindexBestHeader = chainActive.Tip();
         bool fFetch = state.fPreferredDownload || (nPreferredDownload == 0 && !pto->fClient && !pto->fOneShot); // Download if this is a nice peer, or we have no nice peers and this one might do.
         if (!state.fSyncStarted && !pto->fClient && !fImporting && !fReindex) {
@@ -7334,7 +7334,7 @@ bool SendMessages(CNode* pto)
             if ((nSyncStarted == 0 && fFetch) || pindexBestHeader->GetBlockTime() > GetAdjustedTime() - 6 * 60 * 60) { // NOTE: was "close to today" and 24h in Bitcoin
                 state.fSyncStarted = true;
                 nSyncStarted++;
-                const CBlockIndex *pindexStart = pindexBestHeader;
+                auto pindexStart = pindexBestHeader;
                 /* If possible, start at the block preceding the currently
                    best known header.  This ensures that we always get a
                    non-empty list of headers back as long as the peer
@@ -7343,7 +7343,7 @@ bool SendMessages(CNode* pto)
                    if we requested starting at pindexBestHeader and
                    got back an empty response.  */
                 if (pindexStart->pprev)
-                    pindexStart = pindexStart->pprev.get();
+                    pindexStart = pindexStart->pprev;
                 LOG_INFO("initial getheaders ({}) to peer={} (startheight:{})\n", pindexStart->nHeight, pto->id, pto->nStartingHeight);
                 pto->PushMessage(NetMsgType::GETHEADERS, chainActive.GetLocator(pindexStart), uint256());
             }
@@ -7383,7 +7383,7 @@ bool SendMessages(CNode* pto)
                     auto mi = mapBlockIndex.find(hash);
                     assert(mi != mapBlockIndex.end());
                     auto &pindex = mi->second;
-                    if (chainActive[pindex->nHeight] != pindex.get()) {
+                    if (chainActive[pindex->nHeight].get() != pindex.get()) {
                         // Bail out if we reorged away from this block
                         fRevertToInv = true;
                         break;
@@ -7435,7 +7435,7 @@ bool SendMessages(CNode* pto)
                     // Warn if we're announcing a block that is not on the main chain.
                     // This should be very rare and could be optimized out.
                     // Just log for now.
-                    if (chainActive[pindex->nHeight] != pindex.get()) {
+                    if (chainActive[pindex->nHeight].get() != pindex.get()) {
                         LOG_INFO("Announcing block {} not on main chain (tip={})",
                             hashToAnnounce.ToString(), chainActive.Tip()->GetBlockHash().ToString());
                     }
@@ -7609,7 +7609,7 @@ bool SendMessages(CNode* pto)
 ThresholdState VersionBitsTipState(const Consensus::Params& params, Consensus::DeploymentPos pos)
 {
     LOCK(cs_main);
-    return VersionBitsState(chainActive.Tip(), params, pos, versionbitscache);
+    return VersionBitsState(chainActive.Tip().get(), params, pos, versionbitscache);
 }
 
 class CMainCleanup
