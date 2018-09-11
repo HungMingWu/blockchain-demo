@@ -375,8 +375,8 @@ ReadKeyValue(CWallet* pwallet, CDataStream& ssKey, CDataStream& ssValue,
             ssKey >> hash;
             CWalletTx wtx;
             ssValue >> wtx;
-            CValidationState state;
-            if (!(CheckTransaction(wtx, state) && (wtx.GetHash() == hash) && state.IsValid()))
+			CValidationState state = CheckTransaction(wtx);
+            if (!(wtx.GetHash() == hash && state.IsValid()))
                 return false;
 
             // Undo serialize changes in 31600

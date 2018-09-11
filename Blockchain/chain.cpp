@@ -18,7 +18,7 @@ void CChain::SetTip(CBlockIndex *pindex) {
     vChain.resize(pindex->nHeight + 1);
     while (pindex && vChain[pindex->nHeight] != pindex) {
         vChain[pindex->nHeight] = pindex;
-        pindex = pindex->pprev;
+        pindex = pindex->pprev.get();
     }
 }
 
@@ -41,7 +41,7 @@ CBlockLocator CChain::GetLocator(const CBlockIndex *pindex) const {
             pindex = (*this)[nHeight];
         } else {
             // Otherwise, use O(log n) skiplist.
-            pindex = pindex->GetAncestor(nHeight);
+            pindex = pindex->GetAncestor(nHeight).get();
         }
         if (vHave.size() > 10)
             nStep *= 2;
@@ -55,9 +55,9 @@ const CBlockIndex *CChain::FindFork(const CBlockIndex *pindex) const {
         return NULL;
     }
     if (pindex->nHeight > Height())
-        pindex = pindex->GetAncestor(Height());
+        pindex = pindex->GetAncestor(Height()).get();
     while (pindex && !Contains(pindex))
-        pindex = pindex->pprev;
+        pindex = pindex->pprev.get();
     return pindex;
 }
 
@@ -75,12 +75,12 @@ int static inline GetSkipHeight(int height) {
     return (height & 1) ? InvertLowestOne(InvertLowestOne(height - 1)) + 1 : InvertLowestOne(height);
 }
 
-CBlockIndex* CBlockIndex::GetAncestor(int height)
+nonstd::observer_ptr<CBlockIndex> CBlockIndex::GetAncestor(int height)
 {
     if (height > nHeight || height < 0)
         return NULL;
 
-    CBlockIndex* pindexWalk = this;
+    nonstd::observer_ptr<CBlockIndex> pindexWalk(this);
     int heightWalk = nHeight;
     while (heightWalk > height) {
         int heightSkip = GetSkipHeight(heightWalk);
@@ -101,7 +101,7 @@ CBlockIndex* CBlockIndex::GetAncestor(int height)
     return pindexWalk;
 }
 
-const CBlockIndex* CBlockIndex::GetAncestor(int height) const
+nonstd::observer_ptr<const CBlockIndex> CBlockIndex::GetAncestor(int height) const
 {
     return const_cast<CBlockIndex*>(this)->GetAncestor(height);
 }

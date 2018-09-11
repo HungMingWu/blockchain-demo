@@ -173,7 +173,7 @@ private:
     const int nMinBlocksToStore;
 
     // Keep track of current block index
-    const CBlockIndex *pCurrentBlockIndex;
+    nonstd::observer_ptr<const CBlockIndex> pCurrentBlockIndex;
 
 public:
     std::map<uint256, CMasternodePaymentVote> mapMasternodePaymentVotes;

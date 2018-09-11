@@ -5,11 +5,12 @@
 #ifndef BITCOIN_CHECKPOINTS_H
 #define BITCOIN_CHECKPOINTS_H
 
-#include "uint256.h"
-#include "chainparams.h"
-
 #include <map>
 #include <boost/optional.hpp>
+
+#include "uint256.h"
+#include "chainparams.h"
+#include "observer_ptr.h"
 
 class CBlockIndex;
 struct CCheckpointData;
@@ -25,7 +26,7 @@ namespace Checkpoints
 int GetTotalBlocksEstimate(const CCheckpointData& data);
 
 //! Returns last CBlockIndex* in mapBlockIndex that is a checkpoint
-CBlockIndex* GetLastCheckpoint(const CCheckpointData& data);
+nonstd::observer_ptr<const CBlockIndex> GetLastCheckpoint(const CCheckpointData& data);
 //PairCheckpoints ForceGetLastCheckpoint(const CCheckpointData& data);
 boost::optional<uint256> GetHeightCheckpoint(int nHeight ,const CCheckpointData& data);
 double GuessVerificationProgress(const CCheckpointData& data, CBlockIndex* pindex, bool fSigchecks = true);

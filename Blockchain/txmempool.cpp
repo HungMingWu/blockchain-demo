@@ -816,8 +816,8 @@ void CTxMemPool::check(const CCoinsViewCache *pcoins) const
         if (fDependsWait)
             waitingOnDependants.push_back(&(*it));
         else {
-            CValidationState state;
-            assert(CheckInputs(tx, state, mempoolDuplicate, false, 0, false, NULL));
+			CValidationState state = CheckInputs(tx, mempoolDuplicate, false, 0, false, NULL);
+			assert(state.IsValid());
             UpdateCoins(tx, state, mempoolDuplicate, 1000000);
         }
     }
@@ -825,13 +825,13 @@ void CTxMemPool::check(const CCoinsViewCache *pcoins) const
     while (!waitingOnDependants.empty()) {
         const CTxMemPoolEntry* entry = waitingOnDependants.front();
         waitingOnDependants.pop_front();
-        CValidationState state;
         if (!mempoolDuplicate.HaveInputs(entry->GetTx())) {
             waitingOnDependants.push_back(entry);
             stepsSinceLastRemove++;
             assert(stepsSinceLastRemove < waitingOnDependants.size());
         } else {
-            assert(CheckInputs(entry->GetTx(), state, mempoolDuplicate, false, 0, false, NULL));
+			CValidationState state = CheckInputs(entry->GetTx(), mempoolDuplicate, false, 0, false, NULL);
+			assert(state.IsValid());
             UpdateCoins(entry->GetTx(), state, mempoolDuplicate, 1000000);
             stepsSinceLastRemove = 0;
         }

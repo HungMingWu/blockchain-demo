@@ -20,8 +20,8 @@ ToMemPool(CMutableTransaction& tx)
 {
 	LOCK(cs_main);
 
-	CValidationState state;
-	return AcceptToMemoryPool(mempool, state, tx, false, NULL);
+	CValidationState state = AcceptToMemoryPool(mempool, tx, false, NULL);
+	return state.IsValid();
 }
 
 TEST_CASE_METHOD(TestChain100Setup, "tx_mempool_block_doublespend")

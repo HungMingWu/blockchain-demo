@@ -279,12 +279,12 @@ std::vector<CSuperblock_sptr> CGovernanceTriggerManager::GetActiveTriggers()
 
 bool CSuperblockManager::IsSuperblockTriggered(int nBlockHeight)
 {
-    LOG_INFO("CSuperblockManager::IsSuperblockTriggered -- Start nBlockHeight = %d\n", nBlockHeight);
+    LOG_INFO("CSuperblockManager::IsSuperblockTriggered -- Start nBlockHeight = {}", nBlockHeight);
     if (!CSuperblock::IsValidBlockHeight(nBlockHeight)) {
         return false;
     }
     else {
-        LOG_INFO("SuperBlockHeight right %d\n",nBlockHeight);
+        LOG_INFO("SuperBlockHeight right {}",nBlockHeight);
     }
     return true;
 }

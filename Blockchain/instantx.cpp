@@ -516,9 +516,9 @@ bool CInstantSend::ResolveConflicts(const CTxLockCandidate& txLockCandidate, int
         // remove every tx conflicting with current Transaction Lock Request
         std::list<CTransaction> removed = mempool.removeConflicts(txLockCandidate.txLockRequest);
         // and try to accept it in mempool again
-        CValidationState state;
         bool fMissingInputs = false;
-        if(!AcceptToMemoryPool(mempool, state, txLockCandidate.txLockRequest, true, &fMissingInputs)) {
+		CValidationState state = AcceptToMemoryPool(mempool, txLockCandidate.txLockRequest, true, &fMissingInputs);
+        if (!state.IsValid()) {
             LOG_INFO("CInstantSend::ResolveConflicts -- ERROR: Failed to accept completed Transaction Lock to mempool, txid=%s\n", txHash.ToString());
             return false;
         }
@@ -549,8 +549,8 @@ bool CInstantSend::ResolveConflicts(const CTxLockCandidate& txLockCandidate, int
             ResolveConflicts(txLockCandidate, nMaxBlocks - 1);
             LOG_INFO("CTxLockRequest::ResolveConflicts -- Failed to find UTXO %s - activating best chain...\n", txin.prevout.ToStringShort());
             // Activate best chain, block which includes conflicting tx should be rejected by ConnectBlock.
-            CValidationState state;
-            if(!ActivateBestChain(state, Params()) || !state.IsValid()) {
+			CValidationState state = ActivateBestChain(Params());
+            if (!state.IsValid()) {
                 LOG_INFO("CTxLockRequest::ResolveConflicts -- ActivateBestChain failed, txid=%s\n", txin.prevout.ToStringShort());
                 return false;
             }
@@ -788,7 +788,7 @@ void CInstantSend::SyncTransaction(const CTransaction& tx, const CBlock* pblock)
     uint256 txHash = tx.GetHash();
 
     // When tx is 0-confirmed or conflicted, pblock is NULL and nHeightNew should be set to -1
-    CBlockIndex* pblockindex = pblock ? mapBlockIndex[pblock->GetHash()] : NULL;
+    CBlockIndex* pblockindex = pblock ? mapBlockIndex[pblock->GetHash()] .get(): NULL;
     int nHeightNew = pblockindex ? pblockindex->nHeight : -1;
 
 	LOG_INFO("CInstantSend::SyncTransaction -- txid=%s nHeightNew=%d\n", txHash.ToString(), nHeightNew);

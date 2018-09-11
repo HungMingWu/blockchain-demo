@@ -141,7 +141,7 @@ static bool rest_headers(HTTPRequest* req,
     {
         LOCK(cs_main);
         BlockMap::const_iterator it = mapBlockIndex.find(hash);
-        const CBlockIndex *pindex = (it != mapBlockIndex.end()) ? it->second : NULL;
+        CBlockIndex *pindex = (it != mapBlockIndex.end()) ? it->second.get() : NULL;
         while (pindex != NULL && chainActive.Contains(pindex)) {
             headers.push_back(pindex);
             if (headers.size() == (unsigned long)count)
@@ -208,7 +208,7 @@ static bool rest_block(HTTPRequest* req,
         if (mapBlockIndex.count(hash) == 0)
             return RESTERR(req, HTTP_NOT_FOUND, hashStr + " not found");
 
-        pblockindex = mapBlockIndex[hash];
+        pblockindex = mapBlockIndex[hash].get();
         if (fHavePruned && !(pblockindex->nStatus & BLOCK_HAVE_DATA) && pblockindex->nTx > 0)
             return RESTERR(req, HTTP_NOT_FOUND, hashStr + " not available (pruned data)");
 

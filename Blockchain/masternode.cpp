@@ -447,7 +447,7 @@ void CMasternode::UpdateLastPaid(const CBlockIndex *pindex, int nMaxBlocksToScan
         }
 
         if (BlockReading->pprev == NULL) { assert(BlockReading); break; }
-        BlockReading = BlockReading->pprev;
+        BlockReading = BlockReading->pprev.get();
     }
 
     // Last payment for this masternode wasn't found in latest mnpayments blocks
@@ -809,7 +809,7 @@ bool CMasternodeBroadcast::CheckOutpoint(int& nDos)
         LOCK(cs_main);
         auto mi = mapBlockIndex.find(*hashBlock);
         if (mi != end(mapBlockIndex) && (*mi).second) {
-            CBlockIndex* pMNIndex = (*mi).second; // block for 10000 UT tx -> 1 confirmation
+            auto &pMNIndex = (*mi).second; // block for 10000 UT tx -> 1 confirmation
             CBlockIndex* pConfIndex = chainActive[pMNIndex->nHeight + Params().GetConsensus().nMasternodeMinimumConfirmations - 1]; // block where tx got nMasternodeMinimumConfirmations
             if(pConfIndex->GetBlockTime() > sigTime) {
                 LOG_INFO("CMasternodeBroadcast::CheckOutpoint -- Bad sigTime %d (%d conf block is at %d) for Masternode %s %s\n",

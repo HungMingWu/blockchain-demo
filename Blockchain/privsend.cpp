@@ -255,10 +255,10 @@ void CPrivSendPool::ProcessMessage(CNode* pfrom, std::string& strCommand, CDataS
 
             {
                 LOCK(cs_main);
-                CValidationState validationState;
                 mempool.PrioritiseTransaction(tx.GetHash(), tx.GetHash().ToString(), 1000, 0.1*COIN);
-                if(!AcceptToMemoryPool(mempool, validationState, CTransaction(tx), false, NULL, false, true, true)) {
-                    LOG_INFO("DSVIN -- transaction not valid! tx=%s", tx.ToString());
+				CValidationState validationState = AcceptToMemoryPool(mempool, CTransaction(tx), false, NULL, false, true, true);
+                if (!validationState.IsValid()) {
+                    LOG_INFO("DSVIN -- transaction not valid! tx={}", tx.ToString());
                     PushStatus(pfrom, STATUS_REJECTED, ERR_INVALID_TX);
                     return;
                 }
@@ -629,9 +629,9 @@ void CPrivSendPool::CommitFinalTransaction()
     {
         // See if the transaction is valid
         TRY_LOCK(cs_main, lockMain);
-        CValidationState validationState;
         mempool.PrioritiseTransaction(hashTx, hashTx.ToString(), 1000, 0.1*COIN);
-        if(!lockMain || !AcceptToMemoryPool(mempool, validationState, finalTransaction, false, NULL, false, true, true))
+		CValidationState validationState = AcceptToMemoryPool(mempool, finalTransaction, false, NULL, false, true, true);
+        if(!lockMain || !validationState.IsValid())
         {
             LOG_INFO("CPrivSendPool::CommitFinalTransaction -- AcceptToMemoryPool() error: Transaction not valid\n");
             SetNull();
@@ -680,67 +680,69 @@ void CPrivSendPool::CommitFinalTransaction()
 //
 void CPrivSendPool::ChargeFees()
 {
-    if(!fMasterNode) return;
+	if (!fMasterNode) return;
 
-    //we don't need to charge collateral for every offence.
-    if(GetRandInt(100) > 33) return;
+	//we don't need to charge collateral for every offence.
+	if (GetRandInt(100) > 33) return;
 
-    std::vector<CTransaction> vecOffendersCollaterals;
+	std::vector<CTransaction> vecOffendersCollaterals;
 
-    if(nState == POOL_STATE_ACCEPTING_ENTRIES) {
-        for (const CTransaction& txCollateral : vecSessionCollaterals) {
-            bool fFound = false;
-            for (const CPrivSendEntry& entry : vecEntries)
-                if(entry.txCollateral == txCollateral)
-                    fFound = true;
+	if (nState == POOL_STATE_ACCEPTING_ENTRIES) {
+		for (const CTransaction& txCollateral : vecSessionCollaterals) {
+			bool fFound = false;
+			for (const CPrivSendEntry& entry : vecEntries)
+				if (entry.txCollateral == txCollateral)
+					fFound = true;
 
-            // This queue entry didn't send us the promised transaction
-            if(!fFound) {
-                LOG_INFO("CPrivSendPool::ChargeFees -- found uncooperative node (didn't send transaction), found offence\n");
-                vecOffendersCollaterals.push_back(txCollateral);
-            }
-        }
-    }
+			// This queue entry didn't send us the promised transaction
+			if (!fFound) {
+				LOG_INFO("CPrivSendPool::ChargeFees -- found uncooperative node (didn't send transaction), found offence\n");
+				vecOffendersCollaterals.push_back(txCollateral);
+			}
+		}
+	}
 
-    if(nState == POOL_STATE_SIGNING) {
-        // who didn't sign?
-        for (const CPrivSendEntry entry : vecEntries) {
-            for (const CTxPSIn txdsin : entry.vecTxPSIn) {
-                if(!txdsin.fHasSig) {
-                    LOG_INFO("CPrivSendPool::ChargeFees -- found uncooperative node (didn't sign), found offence\n");
-                    vecOffendersCollaterals.push_back(entry.txCollateral);
-                }
-            }
-        }
-    }
+	if (nState == POOL_STATE_SIGNING) {
+		// who didn't sign?
+		for (const CPrivSendEntry entry : vecEntries) {
+			for (const CTxPSIn txdsin : entry.vecTxPSIn) {
+				if (!txdsin.fHasSig) {
+					LOG_INFO("CPrivSendPool::ChargeFees -- found uncooperative node (didn't sign), found offence\n");
+					vecOffendersCollaterals.push_back(entry.txCollateral);
+				}
+			}
+		}
+	}
 
-    // no offences found
-    if(vecOffendersCollaterals.empty()) return;
+	// no offences found
+	if (vecOffendersCollaterals.empty()) return;
 
-    //mostly offending? Charge sometimes
-    if((int)vecOffendersCollaterals.size() >= Params().PoolMaxTransactions() - 1 && GetRandInt(100) > 33) return;
+	//mostly offending? Charge sometimes
+	if ((int)vecOffendersCollaterals.size() >= Params().PoolMaxTransactions() - 1 && GetRandInt(100) > 33) return;
 
-    //everyone is an offender? That's not right
-    if((int)vecOffendersCollaterals.size() >= Params().PoolMaxTransactions()) return;
+	//everyone is an offender? That's not right
+	if ((int)vecOffendersCollaterals.size() >= Params().PoolMaxTransactions()) return;
 
-    //charge one of the offenders randomly
-    std::random_shuffle(vecOffendersCollaterals.begin(), vecOffendersCollaterals.end());
+	//charge one of the offenders randomly
+	std::random_shuffle(vecOffendersCollaterals.begin(), vecOffendersCollaterals.end());
 
-    if(nState == POOL_STATE_ACCEPTING_ENTRIES || nState == POOL_STATE_SIGNING) {
-        LOG_INFO("CPrivSendPool::ChargeFees -- found uncooperative node (didn't %s transaction), charging fees: %s\n",
-                (nState == POOL_STATE_SIGNING) ? "sign" : "send", vecOffendersCollaterals[0].ToString());
+	if (nState == POOL_STATE_ACCEPTING_ENTRIES || nState == POOL_STATE_SIGNING) {
+		LOG_INFO("CPrivSendPool::ChargeFees -- found uncooperative node (didn't %s transaction), charging fees: %s\n",
+			(nState == POOL_STATE_SIGNING) ? "sign" : "send", vecOffendersCollaterals[0].ToString());
 
-        LOCK(cs_main);
+		LOCK(cs_main);
 
-        CValidationState state;
-        bool fMissingInputs;
-        if(!AcceptToMemoryPool(mempool, state, vecOffendersCollaterals[0], false, &fMissingInputs, false, true)) {
-            // should never really happen
-            LOG_INFO("CPrivSendPool::ChargeFees -- ERROR: AcceptToMemoryPool failed!\n");
-        } else {
-            RelayTransaction(vecOffendersCollaterals[0]);
-        }
-    }
+		bool fMissingInputs;
+		CValidationState state = AcceptToMemoryPool(mempool, vecOffendersCollaterals[0], false, &fMissingInputs, false, true);
+
+		if (!state.IsValid()) {
+			// should never really happen
+			LOG_INFO("CPrivSendPool::ChargeFees -- ERROR: AcceptToMemoryPool failed!");
+		}
+		else {
+			RelayTransaction(vecOffendersCollaterals[0]);
+		}
+	}
 }
 
 /*
@@ -767,11 +769,11 @@ void CPrivSendPool::ChargeRandomFees()
 
         LOG_INFO("CPrivSendPool::ChargeRandomFees -- charging random fees, txCollateral=%s", txCollateral.ToString());
 
-        CValidationState state;
-        bool fMissingInputs;
-        if(!AcceptToMemoryPool(mempool, state, txCollateral, false, &fMissingInputs, false, true)) {
+		bool fMissingInputs;
+		CValidationState state = AcceptToMemoryPool(mempool, txCollateral, false, &fMissingInputs, false, true);
+        if (!state.IsValid()) {
             // should never really happen
-            LOG_INFO("CPrivSendPool::ChargeRandomFees -- ERROR: AcceptToMemoryPool failed!\n");
+            LOG_INFO("CPrivSendPool::ChargeRandomFees -- ERROR: AcceptToMemoryPool failed!");
         } else {
             RelayTransaction(txCollateral);
         }
@@ -906,7 +908,7 @@ bool CPrivSendPool::IsCollateralValid(const CTransaction& txCollateral)
         nValueOut += txout.nValue;
 
         if(!txout.scriptPubKey.IsNormalPaymentScript()) {
-            LOG_INFO ("CPrivSendPool::IsCollateralValid -- Invalid Script, txCollateral=%s", txCollateral.ToString());
+            LOG_INFO ("CPrivSendPool::IsCollateralValid -- Invalid Script, txCollateral={}", txCollateral.ToString());
             return false;
         }
     }
@@ -924,13 +926,13 @@ bool CPrivSendPool::IsCollateralValid(const CTransaction& txCollateral)
     }
 
     if(fMissingTx) {
-        LOG_INFO("CPrivSendPool::IsCollateralValid -- Unknown inputs in collateral transaction, txCollateral=%s", txCollateral.ToString());
+        LOG_INFO("CPrivSendPool::IsCollateralValid -- Unknown inputs in collateral transaction, txCollateral={}", txCollateral.ToString());
         return false;
     }
 
     //collateral transactions are required to pay out PRIVATESEND_COLLATERAL as a fee to the miners
     if(nValueIn - nValueOut < PRIVATESEND_COLLATERAL) {
-        LOG_INFO("CPrivSendPool::IsCollateralValid -- did not include enough fees in transaction: fees: %d, txCollateral=%s", nValueOut - nValueIn, txCollateral.ToString());
+        LOG_INFO("CPrivSendPool::IsCollateralValid -- did not include enough fees in transaction: fees: {}, txCollateral={}", nValueOut - nValueIn, txCollateral.ToString());
         return false;
     }
 
@@ -938,9 +940,9 @@ bool CPrivSendPool::IsCollateralValid(const CTransaction& txCollateral)
 
     {
         LOCK(cs_main);
-        CValidationState validationState;
-        if(!AcceptToMemoryPool(mempool, validationState, txCollateral, false, NULL, false, true, true)) {
-            LOG_INFO("CPrivSendPool::IsCollateralValid -- didn't pass AcceptToMemoryPool()\n");
+		CValidationState validationState = AcceptToMemoryPool(mempool, txCollateral, false, NULL, false, true, true);
+        if (!validationState.IsValid()) {
+            LOG_INFO("CPrivSendPool::IsCollateralValid -- didn't pass AcceptToMemoryPool()");
             return false;
         }
     }
@@ -1092,7 +1094,6 @@ bool CPrivSendPool::SendDenominate(const std::vector<CTxIn>& vecTxIn, const std:
 
     //check it against the memory pool to make sure it's valid
     {
-        CValidationState validationState;
         CMutableTransaction tx;
 
         for (const CTxIn& txin : vecTxIn) {
@@ -1109,7 +1110,8 @@ bool CPrivSendPool::SendDenominate(const std::vector<CTxIn>& vecTxIn, const std:
 
         mempool.PrioritiseTransaction(tx.GetHash(), tx.GetHash().ToString(), 1000, 0.1*COIN);
         TRY_LOCK(cs_main, lockMain);
-        if(!lockMain || !AcceptToMemoryPool(mempool, validationState, CTransaction(tx), false, NULL, false, true, true)) {
+		CValidationState validationState = AcceptToMemoryPool(mempool, CTransaction(tx), false, NULL, false, true, true);
+        if (!lockMain || !validationState.IsValid()) {
             LOG_INFO("CPrivSendPool::SendDenominate -- AcceptToMemoryPool() failed! tx=%s", tx.ToString());
             UnlockCoins();
             SetNull();

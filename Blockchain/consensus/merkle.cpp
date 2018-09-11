@@ -153,11 +153,8 @@ uint256 ComputeMerkleRootFromBranch(const uint256& leaf, const std::vector<uint2
 std::tuple<uint256, bool> BlockMerkleRoot(const CBlock& block)
 {
 	std::vector<uint256> leaves(block.vtx.size());
-	printf("Block vtx size = %d\n", block.vtx.size());
-	for (size_t s = 0; s < block.vtx.size(); s++) {
+	for (size_t s = 0; s < block.vtx.size(); s++)
 		leaves[s] = block.vtx[s].GetHash();
-		printf("Block %d: hash = %s\n", s, leaves[s].ToString().c_str());
-	}
 	return ComputeMerkleRoot(leaves);
 }
 

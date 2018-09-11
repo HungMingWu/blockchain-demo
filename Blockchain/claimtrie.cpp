@@ -2171,7 +2171,7 @@ bool CClaimTrieCache::spendSupport(const std::string& name, const COutPoint& out
 
 bool CClaimTrieCache::incrementBlock(insertUndoType& insertUndo, claimQueueRowType& expireUndo, insertUndoType& insertSupportUndo, supportQueueRowType& expireSupportUndo, std::vector<std::pair<std::string, int> >& takeoverHeightUndo) const
 {
-	LOG_INFO("{}: nCurrentHeight (before increment): {}\n", __func__, nCurrentHeight);
+	LOG_INFO("{}: nCurrentHeight (before increment): {}", __func__, nCurrentHeight);
     claimQueueType::iterator itQueueRow = getQueueCacheRow(nCurrentHeight, false);
     if (itQueueRow != claimQueueCache.end())
     {

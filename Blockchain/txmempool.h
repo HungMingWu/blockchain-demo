@@ -19,6 +19,7 @@
 #include "boost/multi_index_container.hpp"
 #include "boost/multi_index/ordered_index.hpp"
 #include <boost/optional.hpp>
+#include "observer_ptr.h"
 
 template <typename T>
 using Opt = boost::optional<T>;
@@ -52,9 +53,9 @@ struct LockPoints
     // As long as the current chain descends from the highest height block
     // containing one of the inputs used in the calculation, then the cached
     // values are still valid even after a reorg.
-    CBlockIndex* maxInputBlock;
+    nonstd::observer_ptr<CBlockIndex> maxInputBlock;
 
-    LockPoints() : height(0), time(0), maxInputBlock(NULL) { }
+    LockPoints() : height(0), time(0)  { }
 };
 
 class CTxMemPool;

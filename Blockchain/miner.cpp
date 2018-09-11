@@ -82,405 +82,403 @@ int64_t UpdateTime(CBlockHeader* pblock, const Consensus::Params& consensusParam
     return nNewTime - nOldTime;
 }
 
-CBlockTemplate* CreateNewBlock(const CChainParams& chainparams, const CScript& scriptPubKeyIn)
+std::unique_ptr<CBlockTemplate> CreateNewBlock(const CChainParams& chainparams, const CScript& scriptPubKeyIn)
 {
-    // Create new block
-    unique_ptr<CBlockTemplate> pblocktemplate(new CBlockTemplate());
-    if(!pblocktemplate.get())
-        return NULL;
-    CBlock *pblock = &pblocktemplate->block; // pointer for convenience
+	// Create new block
+	auto pblocktemplate = std::make_unique<CBlockTemplate>();
+	CBlock *pblock = &pblocktemplate->block; // pointer for convenience
 
-    // Create coinbase tx
-    CMutableTransaction txNew;
-    txNew.vin.resize(1);
-    txNew.vin[0].prevout.SetNull();
-    txNew.vout.resize(1);
-    txNew.vout[0].scriptPubKey = scriptPubKeyIn;
+	// Create coinbase tx
+	CMutableTransaction txNew;
+	txNew.vin.resize(1);
+	txNew.vin[0].prevout.SetNull();
+	txNew.vout.resize(1);
+	txNew.vout[0].scriptPubKey = scriptPubKeyIn;
 
-    // Largest block you're willing to create:
-    unsigned int nBlockMaxSize = GetArg("-blockmaxsize", DEFAULT_BLOCK_MAX_SIZE);
-    // Limit to between 1K and MAX_BLOCK_SIZE-1K for sanity:
-    nBlockMaxSize = std::max((unsigned int)1000, std::min((unsigned int)(MAX_BLOCK_SIZE-1000), nBlockMaxSize));
+	// Largest block you're willing to create:
+	unsigned int nBlockMaxSize = GetArg("-blockmaxsize", DEFAULT_BLOCK_MAX_SIZE);
+	// Limit to between 1K and MAX_BLOCK_SIZE-1K for sanity:
+	nBlockMaxSize = std::max((unsigned int)1000, std::min((unsigned int)(MAX_BLOCK_SIZE - 1000), nBlockMaxSize));
 
-    // How much of the block should be dedicated to high-priority transactions,
-    // included regardless of the fees they pay
-    unsigned int nBlockPrioritySize = GetArg("-blockprioritysize", DEFAULT_BLOCK_PRIORITY_SIZE);
-    nBlockPrioritySize = std::min(nBlockMaxSize, nBlockPrioritySize);
+	// How much of the block should be dedicated to high-priority transactions,
+	// included regardless of the fees they pay
+	unsigned int nBlockPrioritySize = GetArg("-blockprioritysize", DEFAULT_BLOCK_PRIORITY_SIZE);
+	nBlockPrioritySize = std::min(nBlockMaxSize, nBlockPrioritySize);
 
-    // Minimum block size you want to create; block will be filled with free transactions
-    // until there are no more or the block reaches this size:
-    unsigned int nBlockMinSize = GetArg("-blockminsize", DEFAULT_BLOCK_MIN_SIZE);
-    nBlockMinSize = std::min(nBlockMaxSize, nBlockMinSize);
+	// Minimum block size you want to create; block will be filled with free transactions
+	// until there are no more or the block reaches this size:
+	unsigned int nBlockMinSize = GetArg("-blockminsize", DEFAULT_BLOCK_MIN_SIZE);
+	nBlockMinSize = std::min(nBlockMaxSize, nBlockMinSize);
 
-    // Collect memory pool transactions into the block
-    CTxMemPool::setEntries inBlock;
-    CTxMemPool::setEntries waitSet;
+	// Collect memory pool transactions into the block
+	CTxMemPool::setEntries inBlock;
+	CTxMemPool::setEntries waitSet;
 
-    // This vector will be sorted into a priority queue:
-    vector<TxCoinAgePriority> vecPriority;
-    TxCoinAgePriorityCompare pricomparer;
-    std::map<CTxMemPool::txiter, double, CTxMemPool::CompareIteratorByHash> waitPriMap;
-    typedef std::map<CTxMemPool::txiter, double, CTxMemPool::CompareIteratorByHash>::iterator waitPriIter;
-    double actualPriority = -1;
+	// This vector will be sorted into a priority queue:
+	vector<TxCoinAgePriority> vecPriority;
+	TxCoinAgePriorityCompare pricomparer;
+	std::map<CTxMemPool::txiter, double, CTxMemPool::CompareIteratorByHash> waitPriMap;
+	typedef std::map<CTxMemPool::txiter, double, CTxMemPool::CompareIteratorByHash>::iterator waitPriIter;
+	double actualPriority = -1;
 
-    std::priority_queue<CTxMemPool::txiter, std::vector<CTxMemPool::txiter>, ScoreCompare> clearedTxs;
-    bool fPrintPriority = GetBoolArg("-printpriority", DEFAULT_PRINTPRIORITY);
-    uint64_t nBlockSize = 1000;
-    uint64_t nBlockTx = 0;
-    unsigned int nBlockSigOps = 100;
-    int lastFewTxs = 0;
-    CAmount nFees = 0;
+	std::priority_queue<CTxMemPool::txiter, std::vector<CTxMemPool::txiter>, ScoreCompare> clearedTxs;
+	bool fPrintPriority = GetBoolArg("-printpriority", DEFAULT_PRINTPRIORITY);
+	uint64_t nBlockSize = 1000;
+	uint64_t nBlockTx = 0;
+	unsigned int nBlockSigOps = 100;
+	int lastFewTxs = 0;
+	CAmount nFees = 0;
 
-    {
-        LOCK2(cs_main, mempool.cs);
-        CBlockIndex* pindexPrev = chainActive.Tip();
-        const int nHeight = pindexPrev->nHeight + 1;
-        pblock->nTime = GetAdjustedTime();
-        CCoinsViewCache view(pcoinsTip.get());
-        if (!pclaimTrie)
-        {   
-            return NULL;
-        }
-        CClaimTrieCache trieCache(*pclaimTrie);
-        const int64_t nMedianTimePast = pindexPrev->GetMedianTimePast();
+	{
+		LOCK2(cs_main, mempool.cs);
+		CBlockIndex* pindexPrev = chainActive.Tip();
+		const int nHeight = pindexPrev->nHeight + 1;
+		pblock->nTime = GetAdjustedTime();
+		CCoinsViewCache view(pcoinsTip.get());
+		if (!pclaimTrie)
+		{
+			return NULL;
+		}
+		CClaimTrieCache trieCache(*pclaimTrie);
+		const int64_t nMedianTimePast = pindexPrev->GetMedianTimePast();
 
-        // Add our coinbase tx as first transaction
-        pblock->vtx.push_back(txNew);
-        pblocktemplate->vTxFees.push_back(-1); // updated at end
-        pblocktemplate->vTxSigOps.push_back(-1); // updated at end
-        pblock->nVersion = ComputeBlockVersion(pindexPrev, chainparams.GetConsensus());
-        // -regtest only: allow overriding block.nVersion with
-        // -blockversion=N to test forking scenarios
-        if (chainparams.MineBlocksOnDemand())
-            pblock->nVersion = GetArg("-blockversion", pblock->nVersion);
+		// Add our coinbase tx as first transaction
+		pblock->vtx.push_back(txNew);
+		pblocktemplate->vTxFees.push_back(-1); // updated at end
+		pblocktemplate->vTxSigOps.push_back(-1); // updated at end
+		pblock->nVersion = ComputeBlockVersion(pindexPrev, chainparams.GetConsensus());
+		// -regtest only: allow overriding block.nVersion with
+		// -blockversion=N to test forking scenarios
+		if (chainparams.MineBlocksOnDemand())
+			pblock->nVersion = GetArg("-blockversion", pblock->nVersion);
 
-        int64_t nLockTimeCutoff = (STANDARD_LOCKTIME_VERIFY_FLAGS & LOCKTIME_MEDIAN_TIME_PAST)
-                                ? nMedianTimePast
-                                : pblock->GetBlockTime();
+		int64_t nLockTimeCutoff = (STANDARD_LOCKTIME_VERIFY_FLAGS & LOCKTIME_MEDIAN_TIME_PAST)
+			? nMedianTimePast
+			: pblock->GetBlockTime();
 
-        bool fPriorityBlock = nBlockPrioritySize > 0;
-        if (fPriorityBlock) {
-            vecPriority.reserve(mempool.mapTx.size());
-            for (CTxMemPool::indexed_transaction_set::iterator mi = mempool.mapTx.begin();
-                 mi != mempool.mapTx.end(); ++mi)
-            {
-                double dPriority = mi->GetPriority(nHeight);
-                CAmount dummy;
-                mempool.ApplyDeltas(mi->GetTx().GetHash(), dPriority, dummy);
-                vecPriority.push_back(TxCoinAgePriority(dPriority, mi));
-            }
-            std::make_heap(vecPriority.begin(), vecPriority.end(), pricomparer);
-        }
+		bool fPriorityBlock = nBlockPrioritySize > 0;
+		if (fPriorityBlock) {
+			vecPriority.reserve(mempool.mapTx.size());
+			for (CTxMemPool::indexed_transaction_set::iterator mi = mempool.mapTx.begin();
+				mi != mempool.mapTx.end(); ++mi)
+			{
+				double dPriority = mi->GetPriority(nHeight);
+				CAmount dummy;
+				mempool.ApplyDeltas(mi->GetTx().GetHash(), dPriority, dummy);
+				vecPriority.push_back(TxCoinAgePriority(dPriority, mi));
+			}
+			std::make_heap(vecPriority.begin(), vecPriority.end(), pricomparer);
+		}
 
-        CTxMemPool::indexed_transaction_set::nth_index<3>::type::iterator mi = mempool.mapTx.get<3>().begin();
-        CTxMemPool::txiter iter;
+		CTxMemPool::indexed_transaction_set::nth_index<3>::type::iterator mi = mempool.mapTx.get<3>().begin();
+		CTxMemPool::txiter iter;
 
-        while (mi != mempool.mapTx.get<3>().end() || !clearedTxs.empty())
-        {
-            bool priorityTx = false;
-            if (fPriorityBlock && !vecPriority.empty()) { // add a tx from priority queue to fill the blockprioritysize
-                priorityTx = true;
-                iter = vecPriority.front().second;
-                actualPriority = vecPriority.front().first;
-                std::pop_heap(vecPriority.begin(), vecPriority.end(), pricomparer);
-                vecPriority.pop_back();
-            }
-            else if (clearedTxs.empty()) { // add tx with next highest score
-                iter = mempool.mapTx.project<0>(mi);
-                mi++;
-            }
-            else {  // try to add a previously postponed child tx
-                iter = clearedTxs.top();
-                clearedTxs.pop();
-            }
+		while (mi != mempool.mapTx.get<3>().end() || !clearedTxs.empty())
+		{
+			bool priorityTx = false;
+			if (fPriorityBlock && !vecPriority.empty()) { // add a tx from priority queue to fill the blockprioritysize
+				priorityTx = true;
+				iter = vecPriority.front().second;
+				actualPriority = vecPriority.front().first;
+				std::pop_heap(vecPriority.begin(), vecPriority.end(), pricomparer);
+				vecPriority.pop_back();
+			}
+			else if (clearedTxs.empty()) { // add tx with next highest score
+				iter = mempool.mapTx.project<0>(mi);
+				mi++;
+			}
+			else {  // try to add a previously postponed child tx
+				iter = clearedTxs.top();
+				clearedTxs.pop();
+			}
 
-            if (inBlock.count(iter))
-                continue; // could have been added to the priorityBlock
+			if (inBlock.count(iter))
+				continue; // could have been added to the priorityBlock
 
-            const CTransaction& tx = iter->GetTx();
+			const CTransaction& tx = iter->GetTx();
 
-            bool fOrphan = false;
-            for (CTxMemPool::txiter parent : mempool.GetMemPoolParents(iter))
-            {
-                if (!inBlock.count(parent)) {
-                    fOrphan = true;
-                    break;
-                }
-            }
-            if (fOrphan) {
-                if (priorityTx)
-                    waitPriMap.insert(std::make_pair(iter,actualPriority));
-                else
-                    waitSet.insert(iter);
-                continue;
-            }
+			bool fOrphan = false;
+			for (CTxMemPool::txiter parent : mempool.GetMemPoolParents(iter))
+			{
+				if (!inBlock.count(parent)) {
+					fOrphan = true;
+					break;
+				}
+			}
+			if (fOrphan) {
+				if (priorityTx)
+					waitPriMap.insert(std::make_pair(iter, actualPriority));
+				else
+					waitSet.insert(iter);
+				continue;
+			}
 
-            unsigned int nTxSize = iter->GetTxSize();
-            if (fPriorityBlock &&
-                (nBlockSize + nTxSize >= nBlockPrioritySize || !AllowFree(actualPriority))) {
-                fPriorityBlock = false;
-                waitPriMap.clear();
-            }
-            if (!priorityTx &&
-                (iter->GetModifiedFee() < ::minRelayTxFee.GetFee(nTxSize) && nBlockSize >= nBlockMinSize)) {
-                break;
-            }
-            if (nBlockSize + nTxSize >= nBlockMaxSize) {
-                if (nBlockSize >  nBlockMaxSize - 100 || lastFewTxs > 50) {
-                    break;
-                }
-                // Once we're within 1000 bytes of a full block, only look at 50 more txs
-                // to try to fill the remaining space.
-                if (nBlockSize > nBlockMaxSize - 1000) {
-                    lastFewTxs++;
-                }
-                continue;
-            }
+			unsigned int nTxSize = iter->GetTxSize();
+			if (fPriorityBlock &&
+				(nBlockSize + nTxSize >= nBlockPrioritySize || !AllowFree(actualPriority))) {
+				fPriorityBlock = false;
+				waitPriMap.clear();
+			}
+			if (!priorityTx &&
+				(iter->GetModifiedFee() < ::minRelayTxFee.GetFee(nTxSize) && nBlockSize >= nBlockMinSize)) {
+				break;
+			}
+			if (nBlockSize + nTxSize >= nBlockMaxSize) {
+				if (nBlockSize > nBlockMaxSize - 100 || lastFewTxs > 50) {
+					break;
+				}
+				// Once we're within 1000 bytes of a full block, only look at 50 more txs
+				// to try to fill the remaining space.
+				if (nBlockSize > nBlockMaxSize - 1000) {
+					lastFewTxs++;
+				}
+				continue;
+			}
 
-            if (!IsFinalTx(tx, nHeight, nLockTimeCutoff))
-                continue;
+			if (!IsFinalTx(tx, nHeight, nLockTimeCutoff))
+				continue;
 
-            typedef std::vector<std::pair<std::string, uint160> > spentClaimsType;
-            spentClaimsType spentClaims;
+			typedef std::vector<std::pair<std::string, uint160> > spentClaimsType;
+			spentClaimsType spentClaims;
 
-            for (const CTxIn& txin : tx.vin)
-            {
-                const CCoins* coins = view.AccessCoins(txin.prevout.hash);
-                int nTxinHeight = 0;
-                CScript scriptPubKey;
-                bool fGotCoins = false;
-                if (coins)
-                {
-                    if (txin.prevout.n < coins->vout.size())
-                    {
-                        nTxinHeight = coins->nHeight;
-                        scriptPubKey = coins->vout[txin.prevout.n].scriptPubKey;
-                        fGotCoins = true;
-                    }
-                }
-                else // must be in block or else
-                {
-                    for (CTxMemPool::txiter inBlockEntry : inBlock)
-                    {
-                        CTransaction inBlockTx = inBlockEntry->GetTx();
-                        if (inBlockTx.GetHash() == txin.prevout.hash)
-                        {
-                            if (inBlockTx.vout.size() >= txin.prevout.n)
-                            {
-                                nTxinHeight = nHeight;
-                                scriptPubKey = inBlockTx.vout[txin.prevout.n].scriptPubKey;
-                                fGotCoins = true;
-                            }
-                        }
-                    }
-                }
-                if (!fGotCoins)
-                {
-                    LOG_INFO("Tried to include a transaction but could not find the txout it was spending. This is bad. Please send this log file to the maintainers of this program.\n");
-                    throw std::runtime_error("Tried to include a transaction but could not find the txout it was spending.");
-                }
+			for (const CTxIn& txin : tx.vin)
+			{
+				const CCoins* coins = view.AccessCoins(txin.prevout.hash);
+				int nTxinHeight = 0;
+				CScript scriptPubKey;
+				bool fGotCoins = false;
+				if (coins)
+				{
+					if (txin.prevout.n < coins->vout.size())
+					{
+						nTxinHeight = coins->nHeight;
+						scriptPubKey = coins->vout[txin.prevout.n].scriptPubKey;
+						fGotCoins = true;
+					}
+				}
+				else // must be in block or else
+				{
+					for (CTxMemPool::txiter inBlockEntry : inBlock)
+					{
+						CTransaction inBlockTx = inBlockEntry->GetTx();
+						if (inBlockTx.GetHash() == txin.prevout.hash)
+						{
+							if (inBlockTx.vout.size() >= txin.prevout.n)
+							{
+								nTxinHeight = nHeight;
+								scriptPubKey = inBlockTx.vout[txin.prevout.n].scriptPubKey;
+								fGotCoins = true;
+							}
+						}
+					}
+				}
+				if (!fGotCoins)
+				{
+					LOG_INFO("Tried to include a transaction but could not find the txout it was spending. This is bad. Please send this log file to the maintainers of this program.\n");
+					throw std::runtime_error("Tried to include a transaction but could not find the txout it was spending.");
+				}
 
-                std::vector<std::vector<unsigned char> > vvchParams;
-                int op;
+				std::vector<std::vector<unsigned char> > vvchParams;
+				int op;
 
-                if (DecodeClaimScript(scriptPubKey, op, vvchParams))
-                {
-                    if (op == OP_CLAIM_NAME || op == OP_UPDATE_CLAIM)
-                    {
-                        uint160 claimId;
-                        if (op == OP_CLAIM_NAME)
-                        {
-                            assert(vvchParams.size() == 2);
-                            claimId = ClaimIdHash(txin.prevout.hash, txin.prevout.n);
-                        }
-                        else if (op == OP_UPDATE_CLAIM)
-                        {
-                            assert(vvchParams.size() == 3);
-                            claimId = uint160(vvchParams[1]);
-                        }
-                        std::string name(vvchParams[0].begin(), vvchParams[0].end());
-                        int throwaway;
-                        if (trieCache.spendClaim(name, COutPoint(txin.prevout.hash, txin.prevout.n), nTxinHeight, throwaway))
-                        {
-                            std::pair<std::string, uint160> entry(name, claimId);
-                            spentClaims.push_back(entry);
-                        }
-                        else
-                        {
-                            LOG_INFO("%s(): The claim was not found in the trie or queue and therefore can't be updated\n", __func__);
-                        }
-                    }
-                    else if (op == OP_SUPPORT_CLAIM)
-                    {
-                        assert(vvchParams.size() == 2);
-                        std::string name(vvchParams[0].begin(), vvchParams[0].end());
-                        int throwaway;
-                        if (!trieCache.spendSupport(name, COutPoint(txin.prevout.hash, txin.prevout.n), nTxinHeight, throwaway))
-                        {
-                            LOG_INFO("%s(): The support was not found in the trie or queue\n", __func__);
-                        }
-                    }
-                }
-            }
-            
-            for (unsigned int i = 0; i < tx.vout.size(); ++i)
-            {
-                const CTxOut& txout = tx.vout[i];
-            
-                std::vector<std::vector<unsigned char> > vvchParams;
-                int op;
-                if (DecodeClaimScript(txout.scriptPubKey, op, vvchParams))
-                {
-                    if (op == OP_CLAIM_NAME)
-                    {
-                        assert(vvchParams.size() == 2);
-                        std::string name(vvchParams[0].begin(), vvchParams[0].end());
-			std::string addr(vvchParams[1].begin(), vvchParams[1].end());
-                        if (!trieCache.addClaim(name, COutPoint(tx.GetHash(), i), ClaimIdHash(tx.GetHash(), i), txout.nValue, nHeight,addr))
-                        {
-                            LOG_INFO("%s: Something went wrong inserting the name\n", __func__);
-                        }
-                    }
-                    else if (op == OP_UPDATE_CLAIM)
-                    {
-                        assert(vvchParams.size() == 3);
-                        std::string name(vvchParams[0].begin(), vvchParams[0].end());
-			std::string addr(vvchParams[2].begin(), vvchParams[2].end());
-                        uint160 claimId(vvchParams[1]);
-                        spentClaimsType::iterator itSpent;
-                        for (itSpent = spentClaims.begin(); itSpent != spentClaims.end(); ++itSpent)
-                        {
-                            if (itSpent->first == name && itSpent->second == claimId)
-                            {
-                                break;
-                            }
-                        }
-                        if (itSpent != spentClaims.end())
-                        {
-                            spentClaims.erase(itSpent);
-                            if (!trieCache.addClaim(name, COutPoint(tx.GetHash(), i), claimId, txout.nValue, nHeight,addr))
-                            {
-                                LOG_INFO("%s: Something went wrong updating a claim\n", __func__);
-                            }
-                        }
-                        else
-                        {
-                            LOG_INFO("%s(): This update refers to a claim that was not found in the trie or queue, and therefore cannot be updated. The claim may have expired or it may have never existed.\n", __func__);
-                        }
-                    }
-                    else if (op == OP_SUPPORT_CLAIM)
-                    {
-                        assert(vvchParams.size() == 2);
-                        std::string name(vvchParams[0].begin(), vvchParams[0].end());
-                        uint160 supportedClaimId(vvchParams[1]);
-                        if (!trieCache.addSupport(name, COutPoint(tx.GetHash(), i), txout.nValue, supportedClaimId, nHeight))
-                        {
-                            LOG_INFO("%s: Something went wrong inserting the claim support\n", __func__);
-                        }
-                    }
-                }
-            }
-            CValidationState state;
+				if (DecodeClaimScript(scriptPubKey, op, vvchParams))
+				{
+					if (op == OP_CLAIM_NAME || op == OP_UPDATE_CLAIM)
+					{
+						uint160 claimId;
+						if (op == OP_CLAIM_NAME)
+						{
+							assert(vvchParams.size() == 2);
+							claimId = ClaimIdHash(txin.prevout.hash, txin.prevout.n);
+						}
+						else if (op == OP_UPDATE_CLAIM)
+						{
+							assert(vvchParams.size() == 3);
+							claimId = uint160(vvchParams[1]);
+						}
+						std::string name(vvchParams[0].begin(), vvchParams[0].end());
+						int throwaway;
+						if (trieCache.spendClaim(name, COutPoint(txin.prevout.hash, txin.prevout.n), nTxinHeight, throwaway))
+						{
+							std::pair<std::string, uint160> entry(name, claimId);
+							spentClaims.push_back(entry);
+						}
+						else
+						{
+							LOG_INFO("%s(): The claim was not found in the trie or queue and therefore can't be updated\n", __func__);
+						}
+					}
+					else if (op == OP_SUPPORT_CLAIM)
+					{
+						assert(vvchParams.size() == 2);
+						std::string name(vvchParams[0].begin(), vvchParams[0].end());
+						int throwaway;
+						if (!trieCache.spendSupport(name, COutPoint(txin.prevout.hash, txin.prevout.n), nTxinHeight, throwaway))
+						{
+							LOG_INFO("%s(): The support was not found in the trie or queue\n", __func__);
+						}
+					}
+				}
+			}
 
-            unsigned int nTxSigOps = iter->GetSigOpCount();
-            if (nBlockSigOps + nTxSigOps >= MAX_BLOCK_SIGOPS) {
-                if (nBlockSigOps > MAX_BLOCK_SIGOPS - 2) {
-                    break;
-                }
-                continue;
-            }
+			for (unsigned int i = 0; i < tx.vout.size(); ++i)
+			{
+				const CTxOut& txout = tx.vout[i];
 
-            CAmount nTxFees = iter->GetFee();
-            // Added
-            pblock->vtx.push_back(tx);
-            pblocktemplate->vTxFees.push_back(nTxFees);
-            pblocktemplate->vTxSigOps.push_back(nTxSigOps);
-            nBlockSize += nTxSize;
-            ++nBlockTx;
-            nBlockSigOps += nTxSigOps;
-            nFees += nTxFees;
+				std::vector<std::vector<unsigned char> > vvchParams;
+				int op;
+				if (DecodeClaimScript(txout.scriptPubKey, op, vvchParams))
+				{
+					if (op == OP_CLAIM_NAME)
+					{
+						assert(vvchParams.size() == 2);
+						std::string name(vvchParams[0].begin(), vvchParams[0].end());
+						std::string addr(vvchParams[1].begin(), vvchParams[1].end());
+						if (!trieCache.addClaim(name, COutPoint(tx.GetHash(), i), ClaimIdHash(tx.GetHash(), i), txout.nValue, nHeight, addr))
+						{
+							LOG_INFO("%s: Something went wrong inserting the name\n", __func__);
+						}
+					}
+					else if (op == OP_UPDATE_CLAIM)
+					{
+						assert(vvchParams.size() == 3);
+						std::string name(vvchParams[0].begin(), vvchParams[0].end());
+						std::string addr(vvchParams[2].begin(), vvchParams[2].end());
+						uint160 claimId(vvchParams[1]);
+						spentClaimsType::iterator itSpent;
+						for (itSpent = spentClaims.begin(); itSpent != spentClaims.end(); ++itSpent)
+						{
+							if (itSpent->first == name && itSpent->second == claimId)
+							{
+								break;
+							}
+						}
+						if (itSpent != spentClaims.end())
+						{
+							spentClaims.erase(itSpent);
+							if (!trieCache.addClaim(name, COutPoint(tx.GetHash(), i), claimId, txout.nValue, nHeight, addr))
+							{
+								LOG_INFO("%s: Something went wrong updating a claim\n", __func__);
+							}
+						}
+						else
+						{
+							LOG_INFO("%s(): This update refers to a claim that was not found in the trie or queue, and therefore cannot be updated. The claim may have expired or it may have never existed.\n", __func__);
+						}
+					}
+					else if (op == OP_SUPPORT_CLAIM)
+					{
+						assert(vvchParams.size() == 2);
+						std::string name(vvchParams[0].begin(), vvchParams[0].end());
+						uint160 supportedClaimId(vvchParams[1]);
+						if (!trieCache.addSupport(name, COutPoint(tx.GetHash(), i), txout.nValue, supportedClaimId, nHeight))
+						{
+							LOG_INFO("%s: Something went wrong inserting the claim support\n", __func__);
+						}
+					}
+				}
+			}
+			CValidationState state;
 
-            if (fPrintPriority)
-            {
-                double dPriority = iter->GetPriority(nHeight);
-                CAmount dummy;
-                mempool.ApplyDeltas(tx.GetHash(), dPriority, dummy);
-                LOG_INFO("priority %.1f fee %s txid %s\n",
-                          dPriority , CFeeRate(iter->GetModifiedFee(), nTxSize).ToString(), tx.GetHash().ToString());
-            }
+			unsigned int nTxSigOps = iter->GetSigOpCount();
+			if (nBlockSigOps + nTxSigOps >= MAX_BLOCK_SIGOPS) {
+				if (nBlockSigOps > MAX_BLOCK_SIGOPS - 2) {
+					break;
+				}
+				continue;
+			}
 
-            inBlock.insert(iter);
+			CAmount nTxFees = iter->GetFee();
+			// Added
+			pblock->vtx.push_back(tx);
+			pblocktemplate->vTxFees.push_back(nTxFees);
+			pblocktemplate->vTxSigOps.push_back(nTxSigOps);
+			nBlockSize += nTxSize;
+			++nBlockTx;
+			nBlockSigOps += nTxSigOps;
+			nFees += nTxFees;
 
-            // Add transactions that depend on this one to the priority queue
-            for (CTxMemPool::txiter child : mempool.GetMemPoolChildren(iter))
-            {
-                if (fPriorityBlock) {
-                    waitPriIter wpiter = waitPriMap.find(child);
-                    if (wpiter != waitPriMap.end()) {
-                        vecPriority.push_back(TxCoinAgePriority(wpiter->second,child));
-                        std::push_heap(vecPriority.begin(), vecPriority.end(), pricomparer);
-                        waitPriMap.erase(wpiter);
-                    }
-                }
-                else {
-                    if (waitSet.count(child)) {
-                        clearedTxs.push(child);
-                        waitSet.erase(child);
-                    }
-                }
-            }
-        }
+			if (fPrintPriority)
+			{
+				double dPriority = iter->GetPriority(nHeight);
+				CAmount dummy;
+				mempool.ApplyDeltas(tx.GetHash(), dPriority, dummy);
+				LOG_INFO("priority %.1f fee %s txid %s\n",
+					dPriority, CFeeRate(iter->GetModifiedFee(), nTxSize).ToString(), tx.GetHash().ToString());
+			}
 
-        // NOTE: unlike in bitcoin, we need to pass PREVIOUS block height here
-        CAmount blockReward = nFees + GetMinerSubsidy(nHeight, Params().GetConsensus());
+			inBlock.insert(iter);
 
-        // Compute regular coinbase transaction.
-        txNew.vout[0].nValue = blockReward;
-        txNew.vin[0].scriptSig = CScript() << nHeight << OP_0;
+			// Add transactions that depend on this one to the priority queue
+			for (CTxMemPool::txiter child : mempool.GetMemPoolChildren(iter))
+			{
+				if (fPriorityBlock) {
+					waitPriIter wpiter = waitPriMap.find(child);
+					if (wpiter != waitPriMap.end()) {
+						vecPriority.push_back(TxCoinAgePriority(wpiter->second, child));
+						std::push_heap(vecPriority.begin(), vecPriority.end(), pricomparer);
+						waitPriMap.erase(wpiter);
+					}
+				}
+				else {
+					if (waitSet.count(child)) {
+						clearedTxs.push(child);
+						waitSet.erase(child);
+					}
+				}
+			}
+		}
 
-        // Update coinbase transaction with additional info about masternode and governace payments,
-        // get some info back to pass to getblocktemplate
-        FillBlockPayments(txNew, nHeight, blockReward, pblock->txoutMasternode, pblock->voutSuperblock,pblock->txoutFound);
-        // LOG_INFO("CreateNewBlock -- nBlockHeight %d blockReward %lld txoutMasternode %s txNew %s",
-        //             nHeight, blockReward, pblock->txoutMasternode.ToString(), txNew.ToString());
+		// NOTE: unlike in bitcoin, we need to pass PREVIOUS block height here
+		CAmount blockReward = nFees + GetMinerSubsidy(nHeight, Params().GetConsensus());
 
-        nLastBlockTx = nBlockTx;
-        nLastBlockSize = nBlockSize;
-        LOG_INFO("CreateNewBlock(): total size %u txs: %u fees: %ld sigops %d\n", nBlockSize, nBlockTx, nFees, nBlockSigOps);
+		// Compute regular coinbase transaction.
+		txNew.vout[0].nValue = blockReward;
+		txNew.vin[0].scriptSig = CScript() << nHeight << OP_0;
 
-        // Update block coinbase
-        pblock->vtx[0] = txNew;
-        pblocktemplate->vTxFees[0] = -nFees;
+		// Update coinbase transaction with additional info about masternode and governace payments,
+		// get some info back to pass to getblocktemplate
+		FillBlockPayments(txNew, nHeight, blockReward, pblock->txoutMasternode, pblock->voutSuperblock, pblock->txoutFound);
+		// LOG_INFO("CreateNewBlock -- nBlockHeight %d blockReward %lld txoutMasternode %s txNew %s",
+		//             nHeight, blockReward, pblock->txoutMasternode.ToString(), txNew.ToString());
 
-        // Fill in header
-        pblock->hashPrevBlock  = pindexPrev->GetBlockHash();
-        UpdateTime(pblock, chainparams.GetConsensus(), pindexPrev);
+		nLastBlockTx = nBlockTx;
+		nLastBlockSize = nBlockSize;
+		LOG_INFO("CreateNewBlock(): total size {} txs: {} fees: {} sigops {}", nBlockSize, nBlockTx, nFees, nBlockSigOps);
+
+		// Update block coinbase
+		pblock->vtx[0] = txNew;
+		pblocktemplate->vTxFees[0] = -nFees;
+
+		// Fill in header
+		pblock->hashPrevBlock = pindexPrev->GetBlockHash();
+		UpdateTime(pblock, chainparams.GetConsensus(), pindexPrev);
 #if 0
-        pblock->nBits          = GetNextWorkRequired(pindexPrev, pblock, chainparams.GetConsensus());
+		pblock->nBits = GetNextWorkRequired(pindexPrev, pblock, chainparams.GetConsensus());
 #endif
-        // Randomise nonce
-        arith_uint256 nonce = UintToArith256(GetRandHash());
-        // Clear the top and bottom 16 bits (for local use as thread flags and counters)
-        nonce <<= 32;
-        nonce >>= 16;
-        pblock->nNonce = ArithToUint256(nonce);
-        pblocktemplate->vTxSigOps[0] = GetLegacySigOpCount(pblock->vtx[0]);
+		// Randomise nonce
+		arith_uint256 nonce = UintToArith256(GetRandHash());
+		// Clear the top and bottom 16 bits (for local use as thread flags and counters)
+		nonce <<= 32;
+		nonce >>= 16;
+		pblock->nNonce = ArithToUint256(nonce);
+		pblocktemplate->vTxSigOps[0] = GetLegacySigOpCount(pblock->vtx[0]);
 
 		// claim operation
-        insertUndoType dummyInsertUndo;
-        claimQueueRowType dummyExpireUndo;
-        insertUndoType dummyInsertSupportUndo;
-        supportQueueRowType dummyExpireSupportUndo;
-        std::vector<std::pair<std::string, int> > dummyTakeoverHeightUndo;
-        trieCache.incrementBlock(dummyInsertUndo, dummyExpireUndo, dummyInsertSupportUndo, dummyExpireSupportUndo, dummyTakeoverHeightUndo);                                                                                                                                  
-        //pblock->hashClaimTrie = trieCache.getMerkleHash();
-        CValidationState state;
-        if (!TestBlockValidity(state, chainparams, *pblock, pindexPrev, false, false)) {
-            throw std::runtime_error(fmt::format("%s: TestBlockValidity failed: %s", __func__, FormatStateMessage(state)));
-        }
-    }
+		insertUndoType dummyInsertUndo;
+		claimQueueRowType dummyExpireUndo;
+		insertUndoType dummyInsertSupportUndo;
+		supportQueueRowType dummyExpireSupportUndo;
+		std::vector<std::pair<std::string, int> > dummyTakeoverHeightUndo;
+		trieCache.incrementBlock(dummyInsertUndo, dummyExpireUndo, dummyInsertSupportUndo, dummyExpireSupportUndo, dummyTakeoverHeightUndo);
+		//pblock->hashClaimTrie = trieCache.getMerkleHash();
+		CValidationState state;
+		if (!TestBlockValidity(state, chainparams, *pblock, pindexPrev, false, false)) {
+			throw std::runtime_error(fmt::format("{}: TestBlockValidity failed: {}", __func__, FormatStateMessage(state)));
+		}
+	}
 
-    return pblocktemplate.release();
+	return pblocktemplate;
 }
 
 void IncrementExtraNonce(CBlock* pblock, const CBlockIndex* pindexPrev, unsigned int& nExtraNonce)
@@ -522,8 +520,8 @@ static bool ProcessBlockFound(const CBlock* pblock, const CChainParams& chainpar
     GetMainSignals().BlockFound(pblock->GetHash());
 
     // Process this block the same as if we had received it from another node
-    CValidationState state;
-	if (!ProcessNewBlock(state, chainparams, NULL, pblock, true, NULL))
+	CValidationState state = ProcessNewBlock(chainparams, NULL, pblock, true, boost::none);
+	if (!state.IsValid())
 	{
 		LOG_ERROR("ProcessBlockFound -- ProcessNewBlock() failed, block not accepted");
 		return false;

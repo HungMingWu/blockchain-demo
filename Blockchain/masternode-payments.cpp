@@ -233,13 +233,13 @@ void FillBlockPayments(CMutableTransaction& txNew, int nBlockHeight, CAmount blo
 
     if (nBlockHeight < cp.nMasternodePaymentsStartBlock)
     {
-	LOG_INFO("FillBlockPayments -- nBlockHeight %d not reaching masternode payments start block yet"
-             "skipping masternode payment\n", nBlockHeight, cp.nMasternodePaymentsStartBlock);
+	LOG_INFO("FillBlockPayments -- nBlockHeight {} not reaching masternode payments start block yet"
+             "skipping masternode payment", nBlockHeight, cp.nMasternodePaymentsStartBlock);
     }
     else
     {
 	mnpayments.FillBlockPayee(txNew, nBlockHeight, blockReward, txoutMasternodeRet);
-    	LOG_INFO("FillBlockPayments -- nBlockHeight %d blockReward %lld txoutMasternodeRet %s txNew %s",
+    	LOG_INFO("FillBlockPayments -- nBlockHeight {} blockReward {} txoutMasternodeRet {} txNew {}",
   	                    nBlockHeight, blockReward, txoutMasternodeRet.ToString(), txNew.ToString());
     }
 }
@@ -881,15 +881,15 @@ void CMasternodePayments::Sync(CNode* pnode, int nCountNeeded)
 void CMasternodePayments::RequestLowDataPaymentBlocks(CNode* pnode)
 {
     // Old nodes can't process this
-    if(pnode->nVersion < 70202) return;
-    if(!pCurrentBlockIndex) return;
+    if (pnode->nVersion < 70202) return;
+    if (!pCurrentBlockIndex) return;
 
     LOCK2(cs_main, cs_mapMasternodeBlocks);
 
     std::vector<CInv> vToFetch;
     int nLimit = GetStorageLimit();
 
-    const CBlockIndex *pindex = pCurrentBlockIndex;
+    nonstd::observer_ptr<const CBlockIndex> pindex = pCurrentBlockIndex;
 
     while(pCurrentBlockIndex->nHeight - pindex->nHeight < nLimit) {
         if(!mapMasternodeBlocks.count(pindex->nHeight)) {
@@ -903,7 +903,7 @@ void CMasternodePayments::RequestLowDataPaymentBlocks(CNode* pnode)
                 vToFetch.clear();
             }
         }
-        if(!pindex->pprev) break;
+        if (!pindex->pprev) break;
         pindex = pindex->pprev;
     }
 
@@ -983,7 +983,7 @@ int CMasternodePayments::GetStorageLimit()
 
 void CMasternodePayments::UpdatedBlockTip(const CBlockIndex *pindex)
 {
-    pCurrentBlockIndex = pindex;
+    pCurrentBlockIndex.reset(pindex);
     LOG_INFO("CMasternodePayments::UpdatedBlockTip -- pCurrentBlockIndex->nHeight=%d\n", pCurrentBlockIndex->nHeight);
 
     ProcessBlock(pindex->nHeight + 10);

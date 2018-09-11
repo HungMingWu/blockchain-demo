@@ -694,7 +694,7 @@ void ThreadImport(std::vector<boost::filesystem::path> vImportFiles)
             if (!file)
                 break; // This error is logged in OpenBlockFile
             LOG_INFO("Reindexing block file blk%05u.dat...\n", (unsigned int)nFile);
-            LoadExternalBlockFile(chainparams, file, &pos);
+            LoadExternalBlockFile(chainparams, file, pos);
             nFile++;
         }
         pblocktree->WriteReindexing(false);
@@ -1715,8 +1715,8 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
     // ********************************************************* Step 10: import blocks
     
     // scan for better chains in the block chain database, that are not yet connected in the active best chain
-    CValidationState state;
-    if (!ActivateBestChain(state, chainparams))
+	CValidationState state = ActivateBestChain(chainparams);
+    if (!state.IsValid())
         strErrors << "Failed to connect best block";
 
     std::vector<boost::filesystem::path> vImportFiles;

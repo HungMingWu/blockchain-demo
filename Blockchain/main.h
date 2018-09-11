@@ -146,7 +146,7 @@ struct BlockHasher
 extern CScript COINBASE_FLAGS;
 extern CCriticalSection cs_main;
 extern CTxMemPool mempool;
-typedef std::unordered_map<uint256, CBlockIndex*, BlockHasher> BlockMap;
+typedef std::unordered_map<uint256, std::unique_ptr<CBlockIndex>, BlockHasher> BlockMap;
 extern BlockMap mapBlockIndex;
 extern uint64_t nLastBlockTx;
 extern uint64_t nLastBlockSize;
@@ -215,7 +215,7 @@ void UnregisterNodeSignals(CNodeSignals& nodeSignals);
  * @param[out]  dbp     If pblock is stored to disk (or already there), this will be set to its location.
  * @return True if state.IsValid()
  */
-bool ProcessNewBlock(CValidationState& state, const CChainParams& chainparams, const CNode* pfrom, const CBlock* pblock, bool fForceProcessing, CDiskBlockPos* dbp);
+CValidationState ProcessNewBlock(const CChainParams& chainparams, const CNode* pfrom, const CBlock* pblock, bool fForceProcessing, Opt<CDiskBlockPos> dbp);
 /** Check whether enough disk space is available for an incoming block */
 bool CheckDiskSpace(uint64_t nAdditionalBytes = 0);
 /** Open a block file (blk?????.dat) */
@@ -225,7 +225,7 @@ FILE* OpenUndoFile(const CDiskBlockPos &pos, bool fReadOnly = false);
 /** Translation to a filesystem path */
 boost::filesystem::path GetBlockPosFilename(const CDiskBlockPos &pos, const char *prefix);
 /** Import blocks from an external file */
-bool LoadExternalBlockFile(const CChainParams& chainparams, FILE* fileIn, CDiskBlockPos *dbp = NULL);
+bool LoadExternalBlockFile(const CChainParams& chainparams, FILE* fileIn, Opt<CDiskBlockPos> dbp = boost::none);
 /** Initialize a new block tree database + block data on disk */
 bool InitBlockIndex(const CChainParams& chainparams);
 /** Load the block tree and coins database from disk */
@@ -263,7 +263,7 @@ bool GetProofForName(const CBlockIndex* pindexProof, const std::string& name, CC
 using TractactionTuple = std::tuple<boost::optional<CTransaction>, boost::optional<uint256>>;
 TractactionTuple GetTransaction(const uint256 &hash, const Consensus::Params& params, bool fAllowSlow = false);
 /** Find the best known block, and make it the tip of the block chain */
-bool ActivateBestChain(CValidationState& state, const CChainParams& chainparams, const CBlock* pblock = NULL);
+CValidationState ActivateBestChain(const CChainParams& chainparams, const CBlock * pblock = NULL);
 
 CAmount GetMinerSubsidy(const int height, const Consensus::Params &cp);
 CAmount GetMasternodePayment(const int height);
@@ -305,7 +305,7 @@ void FlushStateToDisk();
 void PruneAndFlush();
 
 /** (try to) add transaction to memory pool **/
-bool AcceptToMemoryPool(CTxMemPool& pool, CValidationState &state, const CTransaction &tx, bool fLimitFree,
+CValidationState AcceptToMemoryPool(CTxMemPool& pool, const CTransaction &tx, bool fLimitFree,
                         bool* pfMissingInputs, bool fOverrideMempoolLimit=false, bool fRejectAbsurdFee=false, bool fDryRun=false);
 
 int GetUTXOHeight(const COutPoint& outpoint);
@@ -647,14 +647,14 @@ unsigned int GetP2SHSigOpCount(const CTransaction& tx, const CCoinsViewCache& ma
  * This does not modify the UTXO set. If pvChecks is not NULL, script checks are pushed onto it
  * instead of being performed inline.
  */
-bool CheckInputs(const CTransaction& tx, CValidationState &state, const CCoinsViewCache &view, bool fScriptChecks,
+CValidationState CheckInputs(const CTransaction& tx, const CCoinsViewCache &view, bool fScriptChecks,
                  unsigned int flags, bool cacheStore, std::vector<CScriptCheck> *pvChecks = NULL);
 
 /** Apply the effects of this transaction on the UTXO set represented by view */
 void UpdateCoins(const CTransaction& tx, CValidationState &state, CCoinsViewCache &inputs, int nHeight);
 
 /** Context-independent validity checks */
-bool CheckTransaction(const CTransaction& tx, CValidationState& state);
+CValidationState CheckTransaction(const CTransaction& tx);
 
 /**
  * Check if transaction is final and can be included in a block with the
@@ -751,15 +751,15 @@ bool DisconnectBlocks(int blocks);
 void ReprocessBlocks(int nBlocks);
 
 /** Apply the effects of this block (with given index) on the UTXO set represented by coins */
-bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pindex, CCoinsViewCache& coins, CClaimTrieCache& trieCache,bool fJustCheck = false);
+CValidationState ConnectBlock(const CBlock& block, CBlockIndex* pindex, CCoinsViewCache& coins, CClaimTrieCache& trieCache,bool fJustCheck = false);
 
 /** Context-independent validity checks */
-bool CheckBlockHeader(const CBlockHeader& block, CValidationState& state, bool fCheckPOW = true);
-bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW = true, bool fCheckMerkleRoot = true);
+CValidationState CheckBlockHeader(const CBlockHeader& block, bool fCheckPOW = true);
+CValidationState CheckBlock(const CBlock& block, bool fCheckPOW = true, bool fCheckMerkleRoot = true);
 
 /** Context-dependent validity checks */
-bool ContextualCheckBlockHeader(const CBlockHeader& block, CValidationState& state, CBlockIndex *pindexPrev);
-bool ContextualCheckBlock(const CBlock& block, CValidationState& state, CBlockIndex *pindexPrev);
+CValidationState ContextualCheckBlockHeader(const CBlockHeader& block, CBlockIndex *pindexPrev);
+CValidationState ContextualCheckBlock(const CBlock& block, CBlockIndex *pindexPrev);
 
 /** Check a block is completely valid from start to finish (only works on top of our current best block, with cs_main held) */
 bool TestBlockValidity(CValidationState& state, const CChainParams& chainparams, const CBlock& block, CBlockIndex* pindexPrev, bool fCheckPOW = true, bool fCheckMerkleRoot = true);
@@ -831,7 +831,7 @@ public:
 CBlockIndex* FindForkInGlobalIndex(const CChain& chain, const CBlockLocator& locator);
 
 /** Mark a block as invalid. */
-bool InvalidateBlock(CValidationState& state, const Consensus::Params& consensusParams, CBlockIndex *pindex);
+CValidationState InvalidateBlock(const Consensus::Params& consensusParams, CBlockIndex *pindex);
 
 /** Remove invalidity status from a block and its descendants. */
 bool ReconsiderBlock(CValidationState& state, CBlockIndex *pindex);

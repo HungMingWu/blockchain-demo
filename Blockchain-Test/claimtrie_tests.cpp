@@ -86,9 +86,9 @@ void AddToMempool(CMutableTransaction& tx)
 	//LockPoints lp;
 	//REQUIRE(CheckSequenceLocks(tx, STANDARD_LOCKTIME_VERIFY_FLAGS, &lp));
 	//mempool.addUnchecked(tx.GetHash(), CTxMemPoolEntry(tx, 0, GetTime(), 111.1, chainActive.Height(), mempool.HasNoInputsOf(tx), 10000000000, false, nSigOps, lp));
-	CValidationState state;
+	CValidationState state = AcceptToMemoryPool(mempool, tx, false, NULL);
 
-	REQUIRE(AcceptToMemoryPool(mempool, state, tx, false, NULL));
+	REQUIRE(state.IsValid());
 	//TestMemPoolEntryHelper entry;
 	//entry.nFee = 11;
 	//entry.dPriority = 111.0;
@@ -96,11 +96,11 @@ void AddToMempool(CMutableTransaction& tx)
 	//mempool.addUnchecked(tx.GetHash(), entry.Fee(10000).Time(GetTime()).FromTx(tx));
 }
 
-bool CreateBlock(CBlockTemplate* pblocktemplate)
+bool CreateBlock(CBlockTemplate &blocktemplate)
 {
 	static int unique_block_counter = 0;
 	const CChainParams& chainparams = Params(CBaseChainParams::REGTEST);
-	CBlock* pblock = &pblocktemplate->block;
+	CBlock* pblock = &blocktemplate.block;
 	pblock->nVersion = 1;
 	pblock->nTime = chainActive.Tip()->GetBlockTime() + Params().GetConsensus().nPowTargetSpacing;
 	CMutableTransaction txCoinbase(pblock->vtx[0]);
@@ -117,61 +117,57 @@ bool CreateBlock(CBlockTemplate* pblocktemplate)
 			break;
 		}
 	}
-	CValidationState state;
-	bool success = ProcessNewBlock(state, chainparams, NULL, pblock, true, NULL);
-	success = state.IsValid();
+	CValidationState state = ProcessNewBlock(chainparams, NULL, pblock, true, boost::none);
+	bool success = state.IsValid();
 	success = pblock->GetHash() == chainActive.Tip()->GetBlockHash();
-
+	printf("pblock->GetHash() = %s\n", pblock->GetHash().ToString().c_str());
+	printf("chainActive.Tip()->GetBlockHash() = %s\n", chainActive.Tip()->GetBlockHash().ToString().c_str());
 	pblock->hashPrevBlock = pblock->GetHash();
 	return success;
 }
 
 bool RemoveBlock(uint256& blockhash)
 {
-	CValidationState state;
 	if (mapBlockIndex.count(blockhash) == 0)
 		return false;
-	CBlockIndex* pblockindex = mapBlockIndex[blockhash];
-	InvalidateBlock(state, Params().GetConsensus(), pblockindex);
+	auto &pblockindex = mapBlockIndex[blockhash];
+	CValidationState state = InvalidateBlock(Params().GetConsensus(), pblockindex.get());
 	if (state.IsValid())
 	{
-		ActivateBestChain(state, Params());
+		state = ActivateBestChain(Params());
 	}
 	mempool.clear();
 	return state.IsValid();
 
 }
 
-bool CreateCoinbases(unsigned int num_coinbases, std::vector<CTransaction>& coinbases)
+std::vector<CTransaction> CreateCoinbases(unsigned int num_coinbases)
 {
-
-	coinbases.clear();
-	CBlockTemplate *pblocktemplate = CreateNewBlock(Params(), scriptPubKey);
+	std::vector<CTransaction> coinbases;
+	auto pblocktemplate = CreateNewBlock(Params(), scriptPubKey);
 	REQUIRE(pblocktemplate != nullptr);
 	REQUIRE(pblocktemplate->block.vtx.size() == 1);
 	pblocktemplate->block.hashPrevBlock = chainActive.Tip()->GetBlockHash();
 	for (unsigned int i = 0; i < 100 + num_coinbases; ++i)
 	{
-		REQUIRE(CreateBlock(pblocktemplate) == true);
+		REQUIRE(CreateBlock(*pblocktemplate) == true);
 		if (coinbases.size() < num_coinbases)
 			coinbases.push_back(CTransaction(pblocktemplate->block.vtx[0]));
 	}
-	delete pblocktemplate;
-	return true;
+	return coinbases;
 }
 
 bool CreateBlocks(unsigned int num_blocks, unsigned int num_txs)
 {
-	CBlockTemplate *pblocktemplate = CreateNewBlock(Params(), scriptPubKey);
+	auto pblocktemplate = CreateNewBlock(Params(), scriptPubKey);
 	REQUIRE(pblocktemplate != nullptr);
 	size_t vtx_size = pblocktemplate->block.vtx.size();
 	REQUIRE(vtx_size == num_txs);
 	pblocktemplate->block.hashPrevBlock = chainActive.Tip()->GetBlockHash();
 	for (unsigned int i = 0; i < num_blocks; ++i)
 	{
-		REQUIRE(CreateBlock(pblocktemplate));
+		REQUIRE(CreateBlock(*pblocktemplate));
 	}
-	delete pblocktemplate;
 	return true;
 }
 
@@ -196,9 +192,7 @@ TEST_CASE_METHOD(RegTestingSetup, "claimtrie_insert_update_claim", "[claimtrie]"
 	std::vector<unsigned char> vchValue2(sValue2.begin(), sValue2.end());
 	std::vector<unsigned char> vchValue3(sValue3.begin(), sValue3.end());
 
-	std::vector<CTransaction> coinbases;
-
-	REQUIRE(CreateCoinbases(6, coinbases));
+	std::vector<CTransaction> coinbases = CreateCoinbases(6);
 
 	uint256 hash0(uint256S("0000000000000000000000000000000000000000000000000000000000000001"));
 	//REQUIRE(pclaimTrie->getMerkleHash() == hash0);
@@ -323,26 +317,27 @@ TEST_CASE_METHOD(RegTestingSetup, "claimtrie_insert_update_claim", "[claimtrie]"
 
 	CCoinsViewCache coins(pcoinsTip.get());
 	CClaimTrieCache trieCache(*pclaimTrie);
-	CBlockIndex* pindexState = chainActive.Tip();
+	nonstd::observer_ptr<CBlockIndex> pindexState(chainActive.Tip());
 	CValidationState state;
-	CBlockIndex* pindex;
-	for (pindex = chainActive.Tip(); pindex && pindex->pprev; pindex = pindex->pprev)
+	nonstd::observer_ptr<CBlockIndex> pindex;
+	for (pindex.reset(chainActive.Tip()); pindex && pindex->pprev; pindex = pindex->pprev)
 	{
 		Opt<CBlock> block = ReadBlockFromDisk(*pindex, Params().GetConsensus());
 		REQUIRE(bool(block));
 		if (pindex == pindexState && (coins.DynamicMemoryUsage() + pcoinsTip->DynamicMemoryUsage()) <= nCoinCacheUsage)
 		{
 			bool fClean = true;
-			REQUIRE(DisconnectBlock(*block, state, pindex, coins, trieCache, &fClean));
+			REQUIRE(DisconnectBlock(*block, state, pindex.get(), coins, trieCache, &fClean));
 			pindexState = pindex->pprev;
 		}
 	}
-	while (pindex != chainActive.Tip())
+	while (pindex.get() != chainActive.Tip())
 	{
-		pindex = chainActive.Next(pindex);
+		pindex.reset(chainActive.Next(pindex.get()));
 		Opt<CBlock> block = ReadBlockFromDisk(*pindex, Params().GetConsensus());
 		REQUIRE(bool(block));
-		REQUIRE(ConnectBlock(*block, state, pindex, coins, trieCache));
+		state = ConnectBlock(*block, pindex, coins, trieCache);
+		REQUIRE(state.IsValid());
 	}
 
 	// Roll back the last block, make sure tx1 and tx7 are put back in the trie

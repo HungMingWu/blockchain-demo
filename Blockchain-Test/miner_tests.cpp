@@ -116,7 +116,7 @@ TEST_CASE("CreateNewBlock_validity")
 		CValidationState state;
 		//BOOST_CHECK(ProcessNewBlock(state, chainparams, NULL, pblock, true, NULL));
 		//BOOST_CHECK(state.IsValid());
-		ProcessNewBlock(state, chainparams, NULL, pblock, true, NULL);
+		ProcessNewBlock(state, chainparams, NULL, pblock, true, boost::none);
 		pblock->hashPrevBlock = pblock->GetHash();
 	}
 	delete pblocktemplate;

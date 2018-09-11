@@ -14,7 +14,7 @@ ThresholdState AbstractThresholdConditionChecker::GetStateFor(const CBlockIndex*
 
     // A block's state is always the same as that of the first of its period, so it is computed based on a pindexPrev whose height equals a multiple of nPeriod - 1.
     if (pindexPrev != NULL) {
-        pindexPrev = pindexPrev->GetAncestor(pindexPrev->nHeight - ((pindexPrev->nHeight + 1) % nPeriod));
+        pindexPrev = pindexPrev->GetAncestor(pindexPrev->nHeight - ((pindexPrev->nHeight + 1) % nPeriod)).get();
     }
 
     // Walk backwards in steps of nPeriod to find a pindexPrev whose information is known
@@ -31,7 +31,7 @@ ThresholdState AbstractThresholdConditionChecker::GetStateFor(const CBlockIndex*
             break;
         }
         vToCompute.push_back(pindexPrev);
-        pindexPrev = pindexPrev->GetAncestor(pindexPrev->nHeight - nPeriod);
+        pindexPrev = pindexPrev->GetAncestor(pindexPrev->nHeight - nPeriod).get();
     }
 
     // At this point, cache[pindexPrev] is known
@@ -59,10 +59,10 @@ ThresholdState AbstractThresholdConditionChecker::GetStateFor(const CBlockIndex*
                     break;
                 }
                 // We need to count
-                const CBlockIndex* pindexCount = pindexPrev;
+                nonstd::observer_ptr<const CBlockIndex> pindexCount(pindexPrev);
                 int count = 0;
                 for (int i = 0; i < nPeriod; i++) {
-                    if (Condition(pindexCount, params)) {
+                    if (Condition(pindexCount.get(), params)) {
                         count++;
                     }
                     pindexCount = pindexCount->pprev;

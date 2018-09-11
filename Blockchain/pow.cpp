@@ -34,7 +34,7 @@ unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHead
         arith_uint256 bnTmp;
         bnTmp.SetCompact(pindexFirst->nBits);
         bnTot += bnTmp;
-        pindexFirst = pindexFirst->pprev;
+        pindexFirst = pindexFirst->pprev.get();
     }
 
     // Check we have enough blocks

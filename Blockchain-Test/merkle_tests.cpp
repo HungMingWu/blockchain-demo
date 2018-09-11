@@ -12,7 +12,7 @@
 // Older version of the merkle root computation code, for comparison.
 static std::tuple<uint256, bool, std::vector<uint256>> BlockBuildMerkleTree(const CBlock& block)
 {
-	std::vector<uint256> vMerkleTree(block.vtx.size() * 2 + 16);
+	std::vector<uint256> vMerkleTree;
 	for (const auto & vtx : block.vtx)
 		vMerkleTree.push_back(vtx.GetHash());
 	int j = 0;

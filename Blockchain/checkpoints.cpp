@@ -66,7 +66,7 @@ namespace Checkpoints {
         return checkpoints.rbegin()->first;
     }
 
-    CBlockIndex* GetLastCheckpoint(const CCheckpointData& data)
+    nonstd::observer_ptr<const CBlockIndex> GetLastCheckpoint(const CCheckpointData& data)
     {
         const MapCheckpoints& checkpoints = data.mapCheckpoints;
 
@@ -74,10 +74,10 @@ namespace Checkpoints {
         {
             const uint256& hash = i.second;
             BlockMap::const_iterator t = mapBlockIndex.find(hash);
-            if (t != mapBlockIndex.end())
-                return t->second;
+			if (t != mapBlockIndex.end())
+				return nonstd::make_observer(t->second.get());
         }
-        return NULL;
+		return nullptr;
     }
     
     boost::optional<uint256> GetHeightCheckpoint(int nHeight ,const CCheckpointData& data)

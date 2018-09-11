@@ -7,14 +7,15 @@
 #ifndef ULORD_CHAIN_H
 #define ULORD_CHAIN_H
 
+#include <vector>
 #include <spdlog/fmt/fmt.h>
 
 #include "arith_uint256.h"
 #include "primitives/block.h"
 #include "pow.h"
 #include "uint256.h"
+#include "observer_ptr.h"
 
-#include <vector>
 
 struct CDiskBlockPos
 {
@@ -106,10 +107,10 @@ public:
     const uint256* phashBlock = nullptr;
 
     //! pointer to the index of the predecessor of this block
-    CBlockIndex* pprev = nullptr;
+    nonstd::observer_ptr<CBlockIndex> pprev;
 
     //! pointer to the index of some further predecessor of this block
-    CBlockIndex* pskip = nullptr;
+    nonstd::observer_ptr<CBlockIndex> pskip;
 
     //! height of the entry in the chain. The genesis block has height 0
     int nHeight = 0;
@@ -211,7 +212,7 @@ public:
         int64_t* pbegin = &pmedian[nMedianTimeSpan];
         int64_t* pend = &pmedian[nMedianTimeSpan];
 
-        const CBlockIndex* pindex = this;
+        auto pindex = nonstd::make_observer((const CBlockIndex*)(this));
         for (int i = 0; i < nMedianTimeSpan && pindex; i++, pindex = pindex->pprev)
             *(--pbegin) = pindex->GetBlockTime();
 
@@ -222,7 +223,7 @@ public:
     std::string ToString() const
     {
         return fmt::format("CBlockIndex(pprev=%p, nHeight=%d, merkle=%s, claimtrie=%s, hashBlock=%s)",
-            (void *)pprev, nHeight,
+            (void *)pprev.get(), nHeight,
             hashMerkleRoot.ToString(),
             hashClaimTrie.ToString(),
             GetBlockHash().ToString());
@@ -255,8 +256,8 @@ public:
     void BuildSkip();
 
     //! Efficiently find an ancestor of this block.
-    CBlockIndex* GetAncestor(int height);
-    const CBlockIndex* GetAncestor(int height) const;
+    nonstd::observer_ptr<CBlockIndex> GetAncestor(int height);
+    nonstd::observer_ptr<const CBlockIndex> GetAncestor(int height) const;
 };
 
 /** Used to marshal pointers into hashes for db storage. */

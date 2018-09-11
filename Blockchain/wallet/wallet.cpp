@@ -943,8 +943,8 @@ void CWallet::MarkConflicted(const uint256& hashBlock, const uint256& hashTx)
 
     int conflictconfirms = 0;
     if (mapBlockIndex.count(hashBlock)) {
-        CBlockIndex* pindex = mapBlockIndex[hashBlock];
-        if (chainActive.Contains(pindex)) {
+        auto &pindex = mapBlockIndex[hashBlock];
+        if (chainActive.Contains(pindex.get())) {
             conflictconfirms = -(chainActive.Height() - pindex->nHeight + 1);
         }
     }
@@ -4149,10 +4149,11 @@ bool CWallet::CommitTransaction(CWalletTx& wtxNew, CReserveKey& reservekey, std:
         if (fBroadcastTransactions)
         {
             // Broadcast
-            if (!wtxNew.AcceptToMemoryPool(false))
+			CValidationState state = wtxNew.AcceptToMemoryPool(false);
+            if (!state.IsValid())
             {
                 // This must not fail. The transaction has already been signed and recorded.
-                LOG_INFO("CommitTransaction(): Error: Transaction not valid\n");
+                LOG_INFO("CommitTransaction(): Error: Transaction not valid");
                 return false;
             }
             wtxNew.RelayWalletTransaction(strCommand);
@@ -4781,7 +4782,7 @@ void CWallet::GetKeyBirthTimes(std::map<CKeyID, int64_t> &mapKeyBirth) const {
         // iterate over all wallet transactions...
         const CWalletTx &wtx = (*it).second;
         BlockMap::const_iterator blit = mapBlockIndex.find(wtx.hashBlock);
-        if (blit != mapBlockIndex.end() && chainActive.Contains(blit->second)) {
+        if (blit != mapBlockIndex.end() && chainActive.Contains(blit->second.get())) {
             // ... which are already in a block
             int nHeight = blit->second->nHeight;
             for (const CTxOut &txout : wtx.vout) {
@@ -4791,7 +4792,7 @@ void CWallet::GetKeyBirthTimes(std::map<CKeyID, int64_t> &mapKeyBirth) const {
                     // ... and all their affected keys
                     std::map<CKeyID, CBlockIndex*>::iterator rit = mapKeyFirstBlock.find(keyid);
                     if (rit != mapKeyFirstBlock.end() && nHeight < rit->second->nHeight)
-                        rit->second = blit->second;
+                        rit->second = blit->second.get();
                 }
                 vAffected.clear();
             }
@@ -4885,8 +4886,8 @@ int CMerkleTx::SetMerkleBranch(const CBlock& block)
     auto it = mapBlockIndex.find(hashBlock);
     if (it == end(mapBlockIndex))
         return 0;
-    const CBlockIndex* pindex = it->second;
-    if (!pindex || !chainActive.Contains(pindex))
+    auto &pindex = it->second;
+    if (!pindex || !chainActive.Contains(pindex.get()))
         return 0;
 
     return chainActive.Height() - pindex->nHeight + 1;
@@ -4906,11 +4907,11 @@ int CMerkleTx::GetDepthInMainChain(const CBlockIndex* &pindexRet, bool enableIX)
         if (it == end(mapBlockIndex))
             nResult = 0;
         else {
-            CBlockIndex* pindex = it->second;
-            if (!pindex || !chainActive.Contains(pindex))
+            auto &pindex = it->second;
+            if (!pindex || !chainActive.Contains(pindex.get()))
                 nResult = 0;
             else {
-                pindexRet = pindex;
+                pindexRet = pindex.get();
                 nResult = ((nIndex == -1) ? (-1) : 1) * (chainActive.Height() - pindex->nHeight + 1);
 
                 if (nResult == 0 && !mempool.exists(GetHash()))
@@ -4933,8 +4934,7 @@ int CMerkleTx::GetBlocksToMaturity() const
 }
 
 
-bool CMerkleTx::AcceptToMemoryPool(bool fLimitFree, bool fRejectAbsurdFee)
+CValidationState CMerkleTx::AcceptToMemoryPool(bool fLimitFree, bool fRejectAbsurdFee)
 {
-    CValidationState state;
-    return ::AcceptToMemoryPool(mempool, state, *this, fLimitFree, NULL, false, fRejectAbsurdFee);
+    return ::AcceptToMemoryPool(mempool, *this, fLimitFree, NULL, false, fRejectAbsurdFee);
 }
