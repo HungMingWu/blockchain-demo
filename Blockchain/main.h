@@ -745,25 +745,25 @@ Opt<CBlock> ReadBlockFromDisk(const CBlockIndex &index, const Consensus::Params&
  *  In case pfClean is provided, operation will try to be tolerant about errors, and *pfClean
  *  will be true if no problems were found. Otherwise, the return value will be false in case
  *  of problems. Note that in any case, coins may be modified. */
-bool DisconnectBlock(const CBlock& block, CValidationState& state, const CBlockIndex* pindex, CCoinsViewCache& coins, CClaimTrieCache& trieCache, bool* pfClean = NULL);
+bool DisconnectBlock(const CBlock& block, CValidationState& state, const CBlockIndex &index, CCoinsViewCache& coins, CClaimTrieCache& trieCache, bool* pfClean = NULL);
 
 /** Reprocess a number of blocks to try and get on the correct chain again **/
 bool DisconnectBlocks(int blocks);
 void ReprocessBlocks(int nBlocks);
 
 /** Apply the effects of this block (with given index) on the UTXO set represented by coins */
-CValidationState ConnectBlock(const CBlock& block, CBlockIndex* pindex, CCoinsViewCache& coins, CClaimTrieCache& trieCache,bool fJustCheck = false);
+CValidationState ConnectBlock(const CBlock& block, nonstd::observer_ptr<CBlockIndex> pindex, CCoinsViewCache& coins, CClaimTrieCache& trieCache,bool fJustCheck = false);
 
 /** Context-independent validity checks */
 CValidationState CheckBlockHeader(const CBlockHeader& block, bool fCheckPOW = true);
 CValidationState CheckBlock(const CBlock& block, bool fCheckPOW = true, bool fCheckMerkleRoot = true);
 
 /** Context-dependent validity checks */
-CValidationState ContextualCheckBlockHeader(const CBlockHeader& block, CBlockIndex *pindexPrev);
-CValidationState ContextualCheckBlock(const CBlock& block, CBlockIndex *pindexPrev);
+CValidationState ContextualCheckBlockHeader(const CBlockHeader& block, nonstd::observer_ptr<CBlockIndex> pindexPrev);
+CValidationState ContextualCheckBlock(const CBlock& block, nonstd::observer_ptr<CBlockIndex> pindexPrev);
 
 /** Check a block is completely valid from start to finish (only works on top of our current best block, with cs_main held) */
-bool TestBlockValidity(CValidationState& state, const CChainParams& chainparams, const CBlock& block, CBlockIndex* pindexPrev, bool fCheckPOW = true, bool fCheckMerkleRoot = true);
+bool TestBlockValidity(CValidationState& state, const CChainParams& chainparams, const CBlock& block, nonstd::observer_ptr<CBlockIndex> pindexPrev, bool fCheckPOW = true, bool fCheckMerkleRoot = true);
 
 
 class CBlockFileInfo
@@ -835,7 +835,7 @@ nonstd::observer_ptr<CBlockIndex> FindForkInGlobalIndex(const CChain& chain, con
 CValidationState InvalidateBlock(const Consensus::Params& consensusParams, nonstd::observer_ptr<CBlockIndex> pindex);
 
 /** Remove invalidity status from a block and its descendants. */
-bool ReconsiderBlock(CValidationState& state, CBlockIndex *pindex);
+bool ReconsiderBlock(CValidationState& state, nonstd::observer_ptr<CBlockIndex> pindex);
 
 /** The currently-connected chain of blocks (protected by cs_main). */
 extern CChain chainActive;
@@ -870,7 +870,7 @@ int GetSpendHeight(const CCoinsViewCache& inputs);
 /**
  * Determine what nVersion a new block should use.
  */
-int32_t ComputeBlockVersion(const CBlockIndex* pindexPrev, const Consensus::Params& params);
+int32_t ComputeBlockVersion(nonstd::observer_ptr<const CBlockIndex> pindexPrev, const Consensus::Params& params);
 
 /**
  * Return true if hash can be found in chainActive at nBlockHeight height.

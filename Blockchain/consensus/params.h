@@ -102,6 +102,12 @@ struct Params {
     int64_t nPowTargetTimespan;
     int64_t nPowMaxAdjustDown;
     int64_t nPowMaxAdjustUp;
+	/** how long it took claims to expire before the hard fork */
+	int64_t nOriginalClaimExpirationTime;
+	/** how long it takes claims to expire after the hard fork */
+	int64_t nExtendedClaimExpirationTime;
+	/** blocks before the hard fork that changed the expiration time */
+	int64_t nExtendedClaimExpirationForkHeight;
     int64_t AveragingWindowTimespan() const { return nPowAveragingWindow * nPowTargetSpacing; }
     int64_t MinActualTimespan() const { return (AveragingWindowTimespan() * (100 - nPowMaxAdjustUp  )) / 100; }
     int64_t MaxActualTimespan() const { return (AveragingWindowTimespan() * (100 + nPowMaxAdjustDown)) / 100; }	

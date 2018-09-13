@@ -53,9 +53,9 @@ unsigned int CalculateNextWorkRequired(arith_uint256 bnAvg,
     // Limit adjustment step
     // Use medians to prevent time-warp attacks
     int64_t nActualTimespan = nLastBlockTime - nFirstBlockTime;
-    LOG_INFO("  nActualTimespan = %d  before dampening\n", nActualTimespan);
+    LOG_INFO("  nActualTimespan = {}  before dampening", nActualTimespan);
     nActualTimespan = params.AveragingWindowTimespan() + (nActualTimespan - params.AveragingWindowTimespan())/4;
-    LOG_INFO("  nActualTimespan = %d  before bounds\n", nActualTimespan);
+    LOG_INFO("  nActualTimespan = {}  before bounds", nActualTimespan);
 
     if (nActualTimespan < params.MinActualTimespan())
         nActualTimespan = params.MinActualTimespan();
@@ -72,10 +72,10 @@ unsigned int CalculateNextWorkRequired(arith_uint256 bnAvg,
         bnNew = bnPowLimit;
 
     /// debug print
-    LOG_INFO("GetNextWorkRequired RETARGET\n");
-    LOG_INFO("params.AveragingWindowTimespan() = %d    nActualTimespan = %d\n", params.AveragingWindowTimespan(), nActualTimespan);
-    LOG_INFO("Current average: %08x  %s\n", bnAvg.GetCompact(), bnAvg.ToString());
-    LOG_INFO("After:  %08x  %s\n", bnNew.GetCompact(), bnNew.ToString());
+    LOG_INFO("GetNextWorkRequired RETARGET");
+    LOG_INFO("params.AveragingWindowTimespan() = {}    nActualTimespan = {}", params.AveragingWindowTimespan(), nActualTimespan);
+    LOG_INFO("Current average: {:08x}  {}", bnAvg.GetCompact(), bnAvg.ToString());
+    LOG_INFO("After:  {:08x}  {}", bnNew.GetCompact(), bnNew.ToString());
 
     return bnNew.GetCompact();
 }
@@ -91,14 +91,14 @@ bool CheckProofOfWork(const uint256 &hash, uint32_t nBits, const Consensus::Para
     // Check range
 	if (fNegative || bnTarget == 0 || fOverflow || bnTarget > UintToArith256(params.powLimit))
 	{
-		LOG_ERROR("CheckProofOfWork(): nBits below minimum work");
+		//LOG_ERROR("CheckProofOfWork(): nBits below minimum work");
 		return false;
 	}
 
     // Check proof of work matches claimed amount
     if (UintToArith256(hash) > bnTarget)
     {
-		LOG_ERROR("CheckProofOfWork(): hash doesn't match nBits");
+		//LOG_ERROR("CheckProofOfWork(): hash doesn't match nBits");
 		return false;
     }
     return true;

@@ -100,29 +100,29 @@ bool CreateBlock(CBlockTemplate &blocktemplate)
 {
 	static int unique_block_counter = 0;
 	const CChainParams& chainparams = Params(CBaseChainParams::REGTEST);
-	CBlock* pblock = &blocktemplate.block;
-	pblock->nVersion = 1;
-	pblock->nTime = chainActive.Tip()->GetBlockTime() + Params().GetConsensus().nPowTargetSpacing;
-	CMutableTransaction txCoinbase(pblock->vtx[0]);
+	CBlock &block = blocktemplate.block;
+	block.nVersion = 1;
+	block.nTime = chainActive.Tip()->GetBlockTime() + Params().GetConsensus().nPowTargetSpacing;
+	CMutableTransaction txCoinbase(block.vtx[0]);
 	txCoinbase.vin[0].scriptSig = CScript() << CScriptNum(unique_block_counter++) << CScriptNum(chainActive.Height());
 	txCoinbase.vout[0].nValue = GetBlockSubsidy(chainActive.Height() + 1, chainparams.GetConsensus());
-	pblock->vtx[0] = CTransaction(txCoinbase);
-	std::tie(pblock->hashMerkleRoot, std::ignore) = BlockMerkleRoot(*pblock);
-	pblock->nBits = GetNextWorkRequired(chainActive.Tip(), pblock, chainparams.GetConsensus());
+	block.vtx[0] = CTransaction(txCoinbase);
+	std::tie(block.hashMerkleRoot, std::ignore) = BlockMerkleRoot(block);
+	block.nBits = GetNextWorkRequired(chainActive.Tip(), &block, chainparams.GetConsensus());
 	for (arith_uint256 i = 0; ; ++i)
 	{
-		pblock->nNonce = ArithToUint256(i);
-		if (CheckProofOfWork(pblock->GetHash(), pblock->nBits, chainparams.GetConsensus()))
+		block.nNonce = ArithToUint256(i);
+		if (CheckProofOfWork(block.GetHash(), block.nBits, chainparams.GetConsensus()))
 		{
 			break;
 		}
 	}
-	CValidationState state = ProcessNewBlock(chainparams, NULL, pblock, true, boost::none);
+	CValidationState state = ProcessNewBlock(chainparams, NULL, &block, true, boost::none);
 	bool success = state.IsValid();
-	success = pblock->GetHash() == chainActive.Tip()->GetBlockHash();
-	printf("pblock->GetHash() = %s\n", pblock->GetHash().ToString().c_str());
-	printf("chainActive.Tip()->GetBlockHash() = %s\n", chainActive.Tip()->GetBlockHash().ToString().c_str());
-	pblock->hashPrevBlock = pblock->GetHash();
+	success = block.GetHash() == chainActive.Tip()->GetBlockHash();
+	printf("pblock->GetHash() = %s\n", block.GetHash().ToString().c_str());
+	printf("chainActive.Height() = %d, chainActive.Tip()->GetBlockHash() = %s\n", chainActive.Height(), chainActive.Tip()->GetBlockHash().ToString().c_str());
+	block.hashPrevBlock = block.GetHash();
 	return success;
 }
 
@@ -336,7 +336,7 @@ TEST_CASE_METHOD(RegTestingSetup, "claimtrie_insert_update_claim", "[claimtrie]"
 		pindex = chainActive.Next(pindex);
 		Opt<CBlock> block = ReadBlockFromDisk(*pindex, Params().GetConsensus());
 		REQUIRE(bool(block));
-		state = ConnectBlock(*block, pindex.get(), coins, trieCache);
+		state = ConnectBlock(*block, pindex, coins, trieCache);
 		REQUIRE(state.IsValid());
 	}
 

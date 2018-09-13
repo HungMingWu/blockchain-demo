@@ -237,6 +237,9 @@ public:
         consensus.vDeployments[Consensus::DEPLOYMENT_CSV].nStartTime = 1524045652;              // 2018/4/18 18:0:52
         consensus.vDeployments[Consensus::DEPLOYMENT_CSV].nTimeout = 1555581652;                // 2019/4/18 18:0:52
 
+		consensus.nOriginalClaimExpirationTime = 262974;
+		consensus.nExtendedClaimExpirationTime = 2102400;
+		consensus.nExtendedClaimExpirationForkHeight = 400155;
         /**
          * The message start string is designed to be unlikely to occur in normal data.
          * The characters are rarely used upper ASCII, not valid as UTF-8, and produce
@@ -377,6 +380,10 @@ public:
         consensus.vDeployments[Consensus::DEPLOYMENT_CSV].nStartTime = 1524057440;               // 2018/4/18 20:57:16
         consensus.vDeployments[Consensus::DEPLOYMENT_CSV].nTimeout =   1555592236;               // 2019/4/18 20:57:16
 
+		consensus.nOriginalClaimExpirationTime = 262974;
+		consensus.nExtendedClaimExpirationTime = 2102400;
+		consensus.nExtendedClaimExpirationForkHeight = 278160;
+
         pchMessageStart[0] = 0xc2;
         pchMessageStart[1] = 0xe6;
         pchMessageStart[2] = 0xce;
@@ -502,6 +509,10 @@ public:
         consensus.vDeployments[Consensus::DEPLOYMENT_CSV].bit = 0;
         consensus.vDeployments[Consensus::DEPLOYMENT_CSV].nStartTime = 0;
         consensus.vDeployments[Consensus::DEPLOYMENT_CSV].nTimeout = 1000000000000ULL;
+
+		consensus.nOriginalClaimExpirationTime = 500;
+		consensus.nExtendedClaimExpirationTime = 600;
+		consensus.nExtendedClaimExpirationForkHeight = 800;
 
         pchMessageStart[0] = 0xf0;
         pchMessageStart[1] = 0xc5;

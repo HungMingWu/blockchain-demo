@@ -66,7 +66,7 @@ public:
     }
 };
 
-int64_t UpdateTime(CBlockHeader* pblock, const Consensus::Params& consensusParams, const CBlockIndex* pindexPrev)
+int64_t UpdateTime(CBlockHeader *pblock, const Consensus::Params& consensusParams, nonstd::observer_ptr<const CBlockIndex> pindexPrev)
 {
     int64_t nOldTime = pblock->nTime;
     int64_t nNewTime = std::max(pindexPrev->GetMedianTimePast()+1, GetAdjustedTime());
@@ -75,10 +75,12 @@ int64_t UpdateTime(CBlockHeader* pblock, const Consensus::Params& consensusParam
         pblock->nTime = nNewTime;
 
     // Updating time can change work required on testnet:
-#if 0
-    if (consensusParams.fPowAllowMinDifficultyBlocks)
-        pblock->nBits = GetNextWorkRequired(pindexPrev, pblock, consensusParams);
-#endif
+	if (consensusParams.fPowAllowMinDifficultyBlocks) {
+		pblock->nBits = GetNextWorkRequired(pindexPrev, pblock, consensusParams);
+		if (pblock->nBits == 537857807) {
+			int a = 1;
+		}
+	}
     return nNewTime - nOldTime;
 }
 
@@ -146,7 +148,7 @@ std::unique_ptr<CBlockTemplate> CreateNewBlock(const CChainParams& chainparams, 
 		pblock->vtx.push_back(txNew);
 		pblocktemplate->vTxFees.push_back(-1); // updated at end
 		pblocktemplate->vTxSigOps.push_back(-1); // updated at end
-		pblock->nVersion = ComputeBlockVersion(pindexPrev.get(), chainparams.GetConsensus());
+		pblock->nVersion = ComputeBlockVersion(pindexPrev, chainparams.GetConsensus());
 		// -regtest only: allow overriding block.nVersion with
 		// -blockversion=N to test forking scenarios
 		if (chainparams.MineBlocksOnDemand())
@@ -452,10 +454,11 @@ std::unique_ptr<CBlockTemplate> CreateNewBlock(const CChainParams& chainparams, 
 
 		// Fill in header
 		pblock->hashPrevBlock = pindexPrev->GetBlockHash();
-		UpdateTime(pblock, chainparams.GetConsensus(), pindexPrev.get());
-#if 0
+		UpdateTime(pblock, chainparams.GetConsensus(), pindexPrev);
 		pblock->nBits = GetNextWorkRequired(pindexPrev, pblock, chainparams.GetConsensus());
-#endif
+		if (pblock->nBits == 537857807) {
+			int a = 1;
+		}
 		// Randomise nonce
 		arith_uint256 nonce = UintToArith256(GetRandHash());
 		// Clear the top and bottom 16 bits (for local use as thread flags and counters)
@@ -473,7 +476,7 @@ std::unique_ptr<CBlockTemplate> CreateNewBlock(const CChainParams& chainparams, 
 		trieCache.incrementBlock(dummyInsertUndo, dummyExpireUndo, dummyInsertSupportUndo, dummyExpireSupportUndo, dummyTakeoverHeightUndo);
 		//pblock->hashClaimTrie = trieCache.getMerkleHash();
 		CValidationState state;
-		if (!TestBlockValidity(state, chainparams, *pblock, pindexPrev.get(), false, false)) {
+		if (!TestBlockValidity(state, chainparams, *pblock, pindexPrev, false, false)) {
 			throw std::runtime_error(fmt::format("{}: TestBlockValidity failed: {}", __func__, FormatStateMessage(state)));
 		}
 	}
@@ -635,7 +638,7 @@ void static BitcoinMiner(const CChainParams& chainparams)
                     break;
 
                 // Update nTime every few seconds
-                if (UpdateTime(pblock, chainparams.GetConsensus(), pindexPrev.get()) < 0)
+                if (UpdateTime(pblock, chainparams.GetConsensus(), pindexPrev) < 0)
                     break; // Recreate the block if the clock has run backwards,
                            // so that we can use the correct time.
                 if (chainparams.GetConsensus().fPowAllowMinDifficultyBlocks)

@@ -32,7 +32,7 @@ public:
     CClaimValue() {};
 
     CClaimValue(COutPoint outPoint, uint160 claimId, CAmount nAmount, int nHeight,
-                int nValidAtHeight,std::string addr,std::string name)
+                int nValidAtHeight,std::string addr = "",std::string name = "")
                 : outPoint(outPoint), claimId(claimId)
                 , nAmount(nAmount), nEffectiveAmount(nAmount)
                 , nHeight(nHeight), nValidAtHeight(nValidAtHeight)
@@ -238,6 +238,20 @@ struct nameOutPointType
     }
 };
 
+class CClaimIndexElement
+{
+public:
+	ADD_SERIALIZE_METHODS;
+	template <typename Stream, typename Operation>
+	inline void SerializationOp(Stream& s, Operation ser_action, int nType, int nVersion) {
+		READWRITE(name);
+		READWRITE(claim);
+	}
+
+	std::string name;
+	CClaimValue claim;
+};
+
 typedef std::pair<std::string, CClaimValue> claimQueueEntryType;
 
 typedef std::pair<std::string, CSupportValue> supportQueueEntryType;
@@ -303,6 +317,7 @@ public:
     
     void setExpirationTime(int t);
     
+	bool getClaimById(const uint160 claimId, std::string& name, CClaimValue& claim) const;
     bool getQueueRow(int nHeight, claimQueueRowType& row) const;
     bool getQueueNameRow(const std::string& name, queueNameRowType& row) const;
     bool getExpirationQueueRow(int nHeight, expirationQueueRowType& row) const;
@@ -484,7 +499,7 @@ public:
     CClaimTrieProof getProofForName(const std::string& name) const;
 
     bool finalizeDecrement() const;
-private:
+protected:
     CClaimTrie& base;
 
     bool fRequireTakeoverHeights;

@@ -336,24 +336,24 @@ public:
 /** An in-memory indexed chain of blocks. */
 class CChain {
 private:
-    std::vector<CBlockIndex*> vChain;
+    std::vector<nonstd::observer_ptr<CBlockIndex>> vChain;
 
 public:
     /** Returns the index entry for the genesis block of this chain, or NULL if none. */
-    CBlockIndex *Genesis() const {
-        return vChain.size() > 0 ? vChain[0] : NULL;
+    nonstd::observer_ptr<CBlockIndex> Genesis() const {
+        return vChain.size() > 0 ? vChain[0] : nullptr;
     }
 
     /** Returns the index entry for the tip of this chain, or NULL if none. */
     nonstd::observer_ptr<CBlockIndex> Tip() const {
-        return vChain.size() > 0 ? nonstd::make_observer(vChain[vChain.size() - 1]) : nullptr;
+        return vChain.size() > 0 ? vChain[vChain.size() - 1] : nullptr;
     }
 
     /** Returns the index entry at a particular height in this chain, or NULL if no such height exists. */
     nonstd::observer_ptr<CBlockIndex> operator[](int nHeight) const {
         if (nHeight < 0 || nHeight >= (int)vChain.size())
             return nullptr;
-        return nonstd::make_observer(vChain[nHeight]);
+        return vChain[nHeight];
     }
 
     /** Compare two chains efficiently. */
@@ -381,7 +381,7 @@ public:
     }
 
     /** Set/initialize a chain with a given tip. */
-    void SetTip(CBlockIndex *pindex);
+    void SetTip(nonstd::observer_ptr<CBlockIndex> pindex);
 
     /** Return a CBlockLocator that refers to a block in this chain (by default the tip). */
     CBlockLocator GetLocator(nonstd::observer_ptr<const CBlockIndex> pindex = nullptr) const;

@@ -10,15 +10,15 @@ using namespace std;
 /**
  * CChain implementation
  */
-void CChain::SetTip(CBlockIndex *pindex) {
-    if (pindex == NULL) {
+void CChain::SetTip(nonstd::observer_ptr<CBlockIndex> pindex) {
+    if (!pindex) {
         vChain.clear();
         return;
     }
     vChain.resize(pindex->nHeight + 1);
     while (pindex && vChain[pindex->nHeight] != pindex) {
         vChain[pindex->nHeight] = pindex;
-        pindex = pindex->pprev.get();
+        pindex = pindex->pprev;
     }
 }
 
@@ -77,14 +77,14 @@ int static inline GetSkipHeight(int height) {
 nonstd::observer_ptr<CBlockIndex> CBlockIndex::GetAncestor(int height)
 {
     if (height > nHeight || height < 0)
-        return NULL;
+        return nullptr;
 
     nonstd::observer_ptr<CBlockIndex> pindexWalk(this);
     int heightWalk = nHeight;
     while (heightWalk > height) {
         int heightSkip = GetSkipHeight(heightWalk);
         int heightSkipPrev = GetSkipHeight(heightWalk - 1);
-        if (pindexWalk->pskip != NULL &&
+        if (pindexWalk->pskip &&
             (heightSkip == height ||
              (heightSkip > height && !(heightSkipPrev < heightSkip - 2 &&
                                        heightSkipPrev >= height)))) {

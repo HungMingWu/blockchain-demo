@@ -2,7 +2,9 @@
 find_package(Boost 1.65.0 COMPONENTS filesystem)
 set(TEST_SRCS
 	#dbwrapper_tests.cpp # TestOK
-	claimtrie_tests.cpp
+	claimtriecache_tests.cpp # TestOK
+	claimtriebranching_tests.cpp 
+	#claimtrie_tests.cpp
 	#alert_tests.cpp
 	#base58_tests.cpp 
 	#accounting_tests.cpp

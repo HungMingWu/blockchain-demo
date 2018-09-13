@@ -16,6 +16,7 @@
 static constexpr char HASH_BLOCK = 'h';
 static constexpr char CURRENT_HEIGHT = 't';
 static constexpr char TRIE_NODE = 'n';
+static constexpr char CLAIM_BY_ID = 'i';
 static constexpr char CLAIM_QUEUE_ROW = 'r';
 static constexpr char CLAIM_QUEUE_NAME_ROW = 'm';
 static constexpr char EXP_QUEUE_ROW = 'e';
@@ -614,6 +615,25 @@ bool CClaimTrie::recursiveCheckConsistency(const CClaimTrieNode* node) const
     hasher.Finalize(&(vchHash[0]));
     uint256 calculatedHash(vchHash);
     return calculatedHash == node->hash;
+}
+
+
+bool CClaimTrie::getClaimById(const uint160 claimId, std::string& name, CClaimValue& claim) const
+{
+	CClaimIndexElement element;
+	if (db.Read(std::make_pair(CLAIM_BY_ID, claimId), element))
+	{
+		if (element.claim.claimId == claimId) {
+			name = element.name;
+			claim = element.claim;
+			return true;
+		}
+		else {
+			LOG_INFO("%s: ClaimIndex[%s] returned unmatched claimId %s when looking for %s\n",
+				__func__, claimId.GetHex(), element.claim.claimId.GetHex(), name);
+		}
+	}
+	return false;
 }
 
 bool CClaimTrie::getQueueRow(int nHeight, claimQueueRowType& row) const
