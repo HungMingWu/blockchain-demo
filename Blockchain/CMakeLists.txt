@@ -1,6 +1,6 @@
 ﻿cmake_minimum_required (VERSION 3.8)
 find_package(Boost 1.65.0 REQUIRED COMPONENTS 
-filesystem date_time program_options thread
+filesystem date_time program_options thread context
 serialization)
 find_package(LevelDB REQUIRED)
 find_package(OpenSSL REQUIRED)
